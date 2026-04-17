@@ -1,27 +1,53 @@
-# Build output
+# ── Build output ──────────────────────────────────────────────────────────────
 bin/
 obj/
+dist/
+tmp/
+out-tsc/
+bazel-out/
 
-# User-specific files
+# ── User-specific files ───────────────────────────────────────────────────────
 *.user
 *.suo
-.vs/
+*.sublime-workspace
+*.launch
 
-# Secrets and environment files
+# ── Secrets and environment files ────────────────────────────────────────────
 appsettings.Production.json
 appsettings.Development.json
 secrets.json
 
-# Node modules (Angular)
+# ── Node ──────────────────────────────────────────────────────────────────────
 node_modules/
+npm-debug.log
+yarn-error.log
 
-# Angular build output
-dist/
-
-# Rider/VS Code
+# ── IDEs and editors ──────────────────────────────────────────────────────────
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
 .idea/
-.vscode/
+.project
+.classpath
+.c9/
+.settings/
+.history/
 
-# OS files
+# ── Angular ───────────────────────────────────────────────────────────────────
+.angular/cache
+.angular/
+.sass-cache/
+connect.lock
+coverage/
+libpeerconnection.log
+testem.log
+typings/
+__screenshots__/
+
+# ── OS files ──────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
