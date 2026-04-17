@@ -1,0 +1,42 @@
+.app-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 2rem 1rem 2rem 1.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-right: 1px solid rgba(255, 105, 180, 0.1);
+}
+
+.app-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 2rem;
+  min-height: 100vh;
+  overflow-y: scroll;
+}
+
+@media (max-width: 900px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    position: relative;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 105, 180, 0.1);
+    padding: 1.5rem;
+  }
+
+  .app-main {
+    padding: 1.5rem;
+  }
+}

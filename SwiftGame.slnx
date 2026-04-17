@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="SwiftGame.API\SwiftGame.API.csproj" />
+  <Project Path="SwiftGame.Data.PostgreSql/SwiftGame.Data.PostgreSql.csproj" Id="47cc0257-ee6a-4e7e-95b6-e658ec52489a" />
+  <Project Path="SwiftGame.Data.SqlServer/SwiftGame.Data.SqlServer.csproj" Id="b03bb983-2f15-4f2e-a6ab-83dd223e2f6f" />
+  <Project Path="SwiftGame.Data/SwiftGame.Data.csproj" Id="7e17036a-8449-44ab-9342-c31a3b37e085" />
+  <Project Path="SwiftGame.Music/SwiftGame.Music.csproj" Id="18426dab-2082-4512-bac8-92c968a30fe9" />
+</Solution>

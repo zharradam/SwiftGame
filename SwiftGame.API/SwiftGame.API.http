@@ -1,0 +1,6 @@
+@SwiftGame_HostAddress = http://localhost:5291
+
+GET {{SwiftGame_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

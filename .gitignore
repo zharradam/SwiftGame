@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+.vs/
+
+# Secrets and environment files
+appsettings.Production.json
+appsettings.Development.json
+secrets.json
+
+# Node modules (Angular)
+node_modules/
+
+# Angular build output
+dist/
+
+# Rider/VS Code
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

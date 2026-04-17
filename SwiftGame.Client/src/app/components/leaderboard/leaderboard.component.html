@@ -1,0 +1,39 @@
+<div class="leaderboard-container">
+
+  <div class="leaderboard-header">
+    <h2 class="leaderboard-title">Leaderboard</h2>
+    <button class="btn-refresh" (click)="loadLeaderboard()">Refresh</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="state-loading" *ngIf="state === 'loading'">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Error -->
+  <div class="state-error" *ngIf="state === 'error'">
+    <p>Failed to load leaderboard.</p>
+    <button (click)="loadLeaderboard()">Try Again</button>
+  </div>
+
+  <!-- Empty -->
+  <div class="state-empty" *ngIf="state === 'loaded' && entries.length === 0">
+    <p>No scores yet — be the first to play!</p>
+  </div>
+
+  <!-- Entries -->
+  <div class="leaderboard-list" *ngIf="state === 'loaded' && entries.length > 0">
+    <div class="leaderboard-entry" *ngFor="let entry of entries; let i = index">
+      <span class="entry-rank">{{ getMedal(i) }}</span>
+      <div class="entry-details">
+        <span class="entry-player">{{ entry.playerName }}</span>
+        <span class="entry-song">{{ entry.songTitle }}</span>
+      </div>
+      <div class="entry-score">
+        <span class="entry-points">{{ entry.pointsEarned }}</span>
+        <span class="entry-time">{{ formatTime(entry.responseTimeMs) }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>

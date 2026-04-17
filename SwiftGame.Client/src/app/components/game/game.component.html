@@ -1,0 +1,182 @@
+<div class="game-container">
+
+  <!-- Start screen -->
+  <div class="start-screen" *ngIf="!gameStarted">
+    <div class="game-header">
+      <h1 class="game-title">{{ gameTitle }}</h1>
+      <p class="game-subtitle">HOW WELL DO YOU KNOW TAYLOR SWIFT?</p>
+    </div>
+
+    <div class="start-hero" *ngIf="imageBaseUrl">
+      <img [src]="imageBaseUrl + '/image-08.jpeg'" alt="Taylor Swift"/>
+    </div>
+
+    <div class="start-details">
+      <div class="start-stat">
+        <span class="start-stat-value">{{ questionsPerGame }}</span>
+        <span class="start-stat-label">questions</span>
+      </div>
+      <div class="start-stat-divider"></div>
+      <div class="start-stat">
+        <span class="start-stat-value">100k</span>
+        <span class="start-stat-label">pts max</span>
+      </div>
+      <div class="start-stat-divider"></div>
+      <div class="start-stat">
+        <span class="start-stat-value">4</span>
+        <span class="start-stat-label">choices</span>
+      </div>
+    </div>
+
+    <button class="btn-primary btn-large" (click)="startGame()">
+      Play Now
+    </button>
+    <p class="start-hint">🎵 Turn up your volume!</p>
+  </div>
+
+  <!-- Game -->
+  <ng-container *ngIf="gameStarted">
+
+    <!-- Loading -->
+    <div class="state-loading" *ngIf="state === 'loading'">
+      <div class="spinner"></div>
+      <p>Loading round...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="state-error" *ngIf="state === 'error'">
+      <p>{{ errorMessage }}</p>
+      <button class="btn-primary" (click)="loadRound()">Try Again</button>
+    </div>
+
+    <!-- Game over -->
+    <div class="game-over" *ngIf="gameOver && result">
+
+      <canvas class="fireworks-canvas"
+              #fireworksCanvas
+              *ngIf="showFireworks">
+      </canvas>
+
+      <div class="rank-badge"
+           [class.top1]="playerRank === 1"
+           [class.top3]="playerRank > 1 && playerRank <= 3"
+           [class.top10]="playerRank > 3 && playerRank <= 10">
+        <span class="rank-number">#{{ playerRank }}</span>
+        <span class="rank-label">of {{ totalPlayers }} players</span>
+      </div>
+
+      <h2 class="game-over-title">{{ rankMessage }}</h2>
+
+      <p class="game-over-score">{{ totalScore | number }}</p>
+      <p class="game-over-label">TOTAL POINTS</p>
+      <p class="game-over-questions">{{ questionsPerGame }} questions answered</p>
+
+      <div class="game-over-stats">
+        <div class="game-over-stat">
+          <span class="stat-value">{{ correctCount }}</span>
+          <span class="stat-label">correct</span>
+        </div>
+        <div class="game-over-stat-divider"></div>
+        <div class="game-over-stat">
+          <span class="stat-value">{{ questionsPerGame - correctCount }}</span>
+          <span class="stat-label">wrong</span>
+        </div>
+        <div class="game-over-stat-divider"></div>
+        <div class="game-over-stat">
+          <span class="stat-value">{{ accuracyPercent }}%</span>
+          <span class="stat-label">accuracy</span>
+        </div>
+      </div>
+
+      <div class="game-over-buttons">
+        <button class="btn-primary btn-large" (click)="restartGame()">
+          Play Again
+        </button>
+        <button class="btn-secondary" (click)="goHome()">
+          Home
+        </button>
+      </div>
+    </div>
+
+    <!-- Playing / Answered -->
+    <ng-container *ngIf="(state === 'playing' || state === 'answered') && !gameOver">
+
+      <div class="game-header">
+        <h1 class="game-title">{{ gameTitle }}</h1>
+        <p class="game-subtitle">Guess the Taylor Swift song!</p>
+      </div>
+
+      <div class="stage-image" *ngIf="currentImageUrl">
+        <img [src]="currentImageUrl"
+             alt="Taylor Swift on stage"
+             class="stage-img"
+             (error)="currentImageUrl = ''"/>
+      </div>
+
+      <div class="game-progress">
+        <span class="progress-text">Question {{ displayQuestion }} of {{ questionsPerGame }}</span>
+        <div class="progress-bar">
+          <div class="progress-fill"
+               [style.width.%]="(questionsAnswered / questionsPerGame) * 100">
+          </div>
+        </div>
+        <span class="progress-score">{{ totalScore | number }} pts</span>
+      </div>
+
+      <div class="audio-row">
+        <div class="audio-indicator" *ngIf="state === 'playing'; else audioStopped">
+          <div class="audio-bar"></div>
+          <div class="audio-bar"></div>
+          <div class="audio-bar"></div>
+          <div class="audio-bar"></div>
+          <div class="audio-bar"></div>
+        </div>
+        <ng-template #audioStopped>
+          <div class="audio-placeholder"></div>
+        </ng-template>
+
+        <div class="timer" [class.stopped]="state === 'answered'">
+          <span class="timer-value">{{ formatTime(elapsedMs) }}</span>
+        </div>
+      </div>
+
+      <div class="choices" *ngIf="round">
+        <button
+          *ngFor="let choice of round.choices"
+          class="choice-btn"
+          [class.correct]="getChoiceClass(choice) === 'correct'"
+          [class.incorrect]="getChoiceClass(choice) === 'incorrect'"
+          [disabled]="state === 'answered'"
+          (click)="selectChoice(choice)">
+          {{ choice }}
+        </button>
+      </div>
+
+      <div class="result-area" [class.hidden]="state !== 'answered' || !result">
+        <div class="result-card"
+             *ngIf="result"
+             [class.correct]="result.isCorrect"
+             [class.incorrect]="!result.isCorrect">
+          <div class="result-left">
+            <span class="result-title">{{ result.isCorrect ? 'Correct!' : 'Wrong!' }}</span>
+            <span class="result-song">{{ result.correctTitle }}</span>
+          </div>
+          <div class="result-right">
+            <span class="result-points">+{{ result.pointsEarned | number }}</span>
+            <span class="result-time">{{ formatTime(result.responseTimeMs) }}</span>
+          </div>
+        </div>
+
+        <div class="countdown-overlay" *ngIf="isCountingDown">
+          <div class="countdown-circle">
+            <span class="countdown-number">{{ countdown }}</span>
+          </div>
+          <p class="countdown-text">Next question in...</p>
+        </div>
+      </div>
+
+    </ng-container>
+
+  </ng-container>
+
+</div>
