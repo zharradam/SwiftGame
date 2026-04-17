@@ -112,4 +112,4 @@ SwiftGame/
 
 ## 📄 License
 
-Copyright (c) 2026 zharradam. All rights reserved. This project is proprietary and not open for use, modification, or distribution without explicit written permission.
+Copyright (c) 2026 Michael Cherry. All rights reserved. This project is proprietary and not open for use, modification, or distribution without explicit written permission.
