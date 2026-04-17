@@ -26,10 +26,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("SwiftGameClient", policy =>
     {
-        policy
-            .WithOrigins(
+        policy.WithOrigins(
                 "http://localhost:4200",
-                "https://swiftgame.azurewebsites.net"
+                "https://zharradam.github.io"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -63,11 +62,11 @@ builder.Services.AddDbContext<SwiftGameDbContext>(options =>
 );
 
 // ── Redis cache (leaderboard) ─────────────────────────────────────────────────
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
-    options.InstanceName = "SwiftGame:";
-});
+//builder.Services.AddStackExchangeRedisCache(options =>
+//{
+//options.Configuration = builder.Configuration.GetConnectionString("Redis");
+//options.InstanceName = "SwiftGame:";
+//});
 
 // ── Music provider factory ────────────────────────────────────────────────────
 builder.Services.Configure<SpotifyConfig>(
@@ -94,11 +93,8 @@ builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
 var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 app.UseHttpsRedirection();
 app.UseCors("SwiftGameClient");
