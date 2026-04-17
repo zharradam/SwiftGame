@@ -112,4 +112,4 @@ SwiftGame/
 
 ## 📄 License
 
-MIT License — see [LICENSE](LICENSE) for details.
+Copyright (c) 2026 zharradam. All rights reserved. This project is proprietary and not open for use, modification, or distribution without explicit written permission.
