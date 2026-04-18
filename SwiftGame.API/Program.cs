@@ -87,7 +87,9 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:4200",
-                "https://zharradam.github.io"
+                "https://zharradam.github.io",
+                "https://swiftology.uk",
+                "https://www.swiftology.uk"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
