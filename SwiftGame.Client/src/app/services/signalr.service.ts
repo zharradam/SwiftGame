@@ -68,9 +68,12 @@ export class SignalrService implements OnDestroy {
       this.chatError$.next(error);
     });
 
-    this.chatConnection.start()
-      .then(() => console.log('Chat SignalR connected'))
-      .catch(err => console.error('Chat SignalR connection failed:', err));
+    // Delay start slightly to allow auth state to initialise from localStorage
+    setTimeout(() => {
+      this.chatConnection.start()
+        .then(() => console.log('Chat SignalR connected'))
+        .catch(err => console.error('Chat SignalR connection failed:', err));
+    }, 100);
 
     this.chatConnection.onreconnected(() => console.log('Chat SignalR reconnected'));
     this.chatConnection.onclose(()     => console.log('Chat SignalR closed'));
