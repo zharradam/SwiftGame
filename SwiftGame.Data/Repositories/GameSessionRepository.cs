@@ -40,6 +40,7 @@ public class GameSessionRepository : IGameSessionRepository
     {
         var session = await _context.GameSessions
             .Include(g => g.Scores)
+            .Include(g => g.Player)
             .FirstOrDefaultAsync(g => g.Id == sessionId, cancellationToken);
 
         if (session is null) return;

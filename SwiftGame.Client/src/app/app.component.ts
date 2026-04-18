@@ -6,11 +6,12 @@ import { GameComponent } from './components/game/game.component';
 import { LeaderboardComponent } from './components/leaderboard/leaderboard.component';
 import { AuthModalComponent } from './components/auth-modal/auth-modal.component';
 import { AuthService } from './services/auth.service';
+import { ChatComponent } from './components/chat/chat.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, GameComponent, LeaderboardComponent, AuthModalComponent],
+  imports: [CommonModule, GameComponent, LeaderboardComponent, AuthModalComponent, ChatComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

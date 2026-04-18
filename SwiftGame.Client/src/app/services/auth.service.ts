@@ -1,8 +1,9 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, Injector } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { SignalrService } from './signalr.service';
 
 export interface User {
   id: string;
@@ -47,7 +48,7 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly username = computed(() => this._user()?.username ?? 'Guest');
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private injector: Injector) {}
 
   // ── Register ─────────────────────────────────────────────────────────────
 
@@ -140,6 +141,9 @@ export class AuthService {
     this._user.set(res.user);
     this._loading.set(false);
     this._error.set(null);
+
+    // Reconnect chat with new token
+    this.injector.get(SignalrService).reconnectChat();
   }
 
   private clearStorage() {

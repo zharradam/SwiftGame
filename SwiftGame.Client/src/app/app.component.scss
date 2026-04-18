@@ -71,21 +71,38 @@
   &:hover { opacity: 0.88; }
 }
 
+// ── Overall shell ─────────────────────────────────────────────────────────────
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;          // 👈 was min-height
+  overflow: hidden;       // 👈 prevent outer scroll
+}
+
 // ── Body (sidebar + main) ─────────────────────────────────────────────────────
 .app-body {
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 340px 1fr 600px;
   flex: 1;
+  min-height: 0;          // 👈 critical — allows children to shrink in flex/grid
+  overflow: hidden;
 }
 
 .app-sidebar {
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: 100%;           // 👈 was 100vh
   overflow-y: auto;
-  padding: 2rem 1rem 2rem 1.5rem;
+  padding: 1.5rem 1rem 1.5rem 1.5rem;
   background: rgba(255, 255, 255, 0.02);
   border-right: 1px solid rgba(255, 105, 180, 0.1);
+}
+
+.app-chat {
+  padding: 1rem;
+  border-left: 1px solid rgba(255, 105, 180, 0.1);
+  height: 100%;           // 👈 was 100vh
+  overflow-y: auto;
 }
 
 .app-main {
@@ -93,25 +110,27 @@
   align-items: flex-start;
   justify-content: center;
   padding: 3rem 2rem;
-  min-height: 100vh;
-  overflow-y: scroll;
+  height: 100%;           // 👈 was min-height: 100vh
+  overflow-y: auto;       // 👈 was scroll
 }
 
 // ── Responsive ────────────────────────────────────────────────────────────────
-@media (max-width: 900px) {
+@media (max-width: 1100px) {   // 👈 raised breakpoint for three columns
   .app-body {
     grid-template-columns: 1fr;
   }
 
-  .app-sidebar {
+  .app-sidebar, .app-chat {
     position: relative;
     height: auto;
     border-right: none;
+    border-left: none;
     border-bottom: 1px solid rgba(255, 105, 180, 0.1);
     padding: 1.5rem;
   }
 
   .app-main {
     padding: 1.5rem;
+    height: auto;
   }
 }

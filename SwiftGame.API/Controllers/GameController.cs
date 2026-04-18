@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using SwiftGame.API.Hubs;
 using SwiftGame.API.Models;
+using SwiftGame.API.Services;
 using SwiftGame.API.Settings;
 using SwiftGame.Data.Entities;
 using SwiftGame.Data.Repositories;
@@ -23,6 +24,8 @@ public class GameController : ControllerBase
     private readonly IGameSessionRepository _gameSessionRepository;
     private readonly GameSettings _gameSettings;
     private readonly IHubContext<LeaderboardHub> _hubContext;
+    private readonly IHubContext<ChatHub> _chatContext;
+    private readonly IChatService _chatService;
 
     public GameController(
         IMusicProviderFactory factory,
@@ -30,7 +33,9 @@ public class GameController : ControllerBase
         ILeaderboardRepository leaderboardRepository,
         IGameSessionRepository gameSessionRepository,
         IOptions<GameSettings> gameSettings,
-        IHubContext<LeaderboardHub> hubContext)
+        IHubContext<LeaderboardHub> hubContext,
+        IHubContext<ChatHub> chatHubContext,
+        IChatService chatService)
     {
         _previewResolver = factory.CreatePreviewResolver();
         _songRepository = songRepository;
@@ -38,6 +43,8 @@ public class GameController : ControllerBase
         _gameSessionRepository = gameSessionRepository;
         _gameSettings = gameSettings.Value;
         _hubContext = hubContext;
+        _chatContext = chatHubContext;
+        _chatService = chatService;
     }
 
     // ── GET api/game/config ───────────────────────────────────────────────────
@@ -166,10 +173,12 @@ public class GameController : ControllerBase
 
     [HttpPost("session/end")]
     public async Task<IActionResult> EndSession(
-        [FromBody] EndSessionRequest request,
-        CancellationToken cancellationToken)
+    [FromBody] EndSessionRequest request,
+    CancellationToken cancellationToken)
     {
         await _gameSessionRepository.CompleteAsync(request.SessionId, cancellationToken);
+
+        var session = await _gameSessionRepository.GetByIdAsync(request.SessionId, cancellationToken);
 
         var rank = await _gameSessionRepository.GetSessionRankAsync(
             request.SessionId, cancellationToken);
@@ -179,6 +188,17 @@ public class GameController : ControllerBase
 
         await _hubContext.Clients.Group("leaderboard")
             .SendAsync("LeaderboardUpdated", cancellationToken);
+
+        if (session is not null)
+        {
+            var playerName = session.Player?.Username ?? "Guest";
+            var points = session.TotalPoints;
+
+            var systemMsg = _chatService.AddMessage(
+                "", $"🎵 {playerName} just scored {points:N0} points!", false, isSystem: true);
+
+            await _chatContext.Clients.All.SendAsync("ReceiveMessage", systemMsg);
+        }
 
         return Ok(new
         {
