@@ -89,6 +89,7 @@ export class SignalrService implements OnDestroy {
   }
 
   reconnectChat(): void {
+    console.log('Reconnecting chat with token:', this.auth.getAccessToken() ? 'present' : 'empty');
     this.chatConnection.stop().then(() => {
       this.chatConnection.start()
         .then(() => console.log('Chat SignalR reconnected with auth'))

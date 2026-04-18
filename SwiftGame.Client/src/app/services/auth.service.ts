@@ -143,6 +143,7 @@ export class AuthService {
     this._error.set(null);
 
     // Reconnect chat with new token
+    console.log('handleAuthSuccess called, attempting reconnect...');
     this.injector.get(SignalrService).reconnectChat();
   }
 
