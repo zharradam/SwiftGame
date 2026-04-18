@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
 export interface ChatMessage {
+  id:        string;
   username:  string;
   message:   string;
   timestamp: string;
@@ -24,9 +25,11 @@ export class SignalrService implements OnDestroy {
   private chatConnection: signalR.HubConnection;
   private allMessages$  = new BehaviorSubject<ChatMessage[]>([]);
   private chatError$    = new Subject<string>();
+  private playerBanned$ = new Subject<string>();
 
   readonly allMessages  = this.allMessages$.asObservable();
   readonly chatError    = this.chatError$.asObservable();
+  readonly playerBanned = this.playerBanned$.asObservable();
 
   constructor(private auth: AuthService) {
     // ── Leaderboard connection ────────────────────────────────────────────
@@ -55,12 +58,10 @@ export class SignalrService implements OnDestroy {
       .build();
 
     this.chatConnection.on('ReceiveMessage', (message: ChatMessage) => {
-      // Append to the single shared message list
       this.allMessages$.next([...this.allMessages$.value, message]);
     });
 
     this.chatConnection.on('ChatHistory', (messages: ChatMessage[]) => {
-      // Replace with full history on connect
       this.allMessages$.next(messages);
     });
 
@@ -68,7 +69,25 @@ export class SignalrService implements OnDestroy {
       this.chatError$.next(error);
     });
 
-    // Delay start slightly to allow auth state to initialise from localStorage
+    this.chatConnection.on('MessageDeleted', (messageId: string) => {
+      this.allMessages$.next(
+        this.allMessages$.value.filter(m => m.id !== messageId)
+      );
+    });
+
+    this.chatConnection.on('PlayerBanned', (username: string) => {
+      // Remove banned player's messages
+      this.allMessages$.next(
+        this.allMessages$.value.filter(m => m.username !== username)
+      );
+      this.playerBanned$.next(username);
+    });
+
+    this.chatConnection.on('PlayerUnbanned', (_username: string) => {
+      // Nothing to do on the message list
+    });
+
+    // Delay start to allow auth state to initialise from localStorage
     setTimeout(() => {
       this.chatConnection.start()
         .then(() => console.log('Chat SignalR connected'))
@@ -86,8 +105,14 @@ export class SignalrService implements OnDestroy {
     }
   }
 
+  deleteMessage(messageId: string): void {
+    if (this.chatConnection.state === signalR.HubConnectionState.Connected) {
+      this.chatConnection.invoke('DeleteMessage', messageId)
+        .catch(err => console.error('Delete failed:', err));
+    }
+  }
+
   reconnectChat(): void {
-    console.log('Reconnecting chat with token:', this.auth.getAccessToken() ? 'present' : 'empty');
     this.chatConnection.stop().then(() => {
       this.chatConnection.start()
         .then(() => console.log('Chat SignalR reconnected with auth'))

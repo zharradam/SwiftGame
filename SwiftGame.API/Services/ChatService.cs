@@ -1,15 +1,17 @@
 ﻿using System.Collections.Concurrent;
 using SwiftGame.API.Models.Chat;
-using ProfanityFilter;
 
 namespace SwiftGame.API.Services;
 
 public interface IChatService
 {
     IReadOnlyList<ChatMessage> GetRecentMessages();
-    (bool allowed, string filtered) ProcessMessage(string username, string message, bool isGuest);
+    (bool allowed, string filtered) ProcessMessage(string username, string message, bool isGuest, bool isBanned);
     ChatMessage AddMessage(string username, string message, bool isGuest, bool isSystem = false);
     bool IsRateLimited(string username);
+    void DeleteMessage(string messageId);
+    void DeleteMessagesByUser(string username);
+    void ClearMessages();
 }
 
 public class ChatService : IChatService
@@ -35,10 +37,11 @@ public class ChatService : IChatService
         return false;
     }
 
-    public (bool allowed, string filtered) ProcessMessage(string username, string message, bool isGuest)
+    public (bool allowed, string filtered) ProcessMessage(
+        string username, string message, bool isGuest, bool isBanned)
     {
-        if (isGuest)
-            return (false, string.Empty);
+        if (isGuest) return (false, string.Empty);
+        if (isBanned) return (false, string.Empty);
 
         if (string.IsNullOrWhiteSpace(message))
             return (false, string.Empty);
@@ -47,9 +50,7 @@ public class ChatService : IChatService
         if (trimmed.Length > MaxMessageLength)
             trimmed = trimmed[..MaxMessageLength];
 
-        // CensorString replaces profanity with asterisks
-        var filtered = _profanityFilter.CensorString(trimmed);
-
+        var filtered = _profanityFilter.CensorString(trimmed, '*');
         return (true, filtered);
     }
 
@@ -57,11 +58,12 @@ public class ChatService : IChatService
     {
         var chatMessage = new ChatMessage
         {
+            Id = Guid.NewGuid().ToString(),
             Username = username,
             Message = message,
             IsGuest = isGuest,
             IsSystem = isSystem,
-            Timestamp = DateTime.UtcNow.ToString("HH:mm")
+            Timestamp = DateTime.UtcNow.ToString("O")
         };
 
         _messages.Enqueue(chatMessage);
@@ -70,5 +72,26 @@ public class ChatService : IChatService
             _messages.TryDequeue(out _);
 
         return chatMessage;
+    }
+
+    public void DeleteMessage(string messageId)
+    {
+        var messages = _messages.ToArray();
+        while (_messages.TryDequeue(out _)) { }
+        foreach (var msg in messages.Where(m => m.Id != messageId))
+            _messages.Enqueue(msg);
+    }
+
+    public void DeleteMessagesByUser(string username)
+    {
+        var messages = _messages.ToArray();
+        while (_messages.TryDequeue(out _)) { }
+        foreach (var msg in messages.Where(m => m.Username != username))
+            _messages.Enqueue(msg);
+    }
+
+    public void ClearMessages()
+    {
+        while (_messages.TryDequeue(out _)) { }
     }
 }

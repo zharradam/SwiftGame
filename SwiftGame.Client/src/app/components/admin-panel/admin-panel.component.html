@@ -1,0 +1,51 @@
+<div class="admin-overlay" (click)="close.emit()">
+  <div class="admin-panel" (click)="$event.stopPropagation()">
+
+    <div class="admin-header">
+      <h2>Player Management</h2>
+      <button class="admin-close" (click)="close.emit()">✕</button>
+    </div>
+
+    @if (loading) {
+      <div class="admin-loading">Loading players...</div>
+    }
+
+    @if (error) {
+      <div class="admin-error">{{ error }}</div>
+    }
+
+    @if (!loading) {
+      <div class="admin-list">
+        @for (player of players; track player.id) {
+          <div class="admin-player" [class.banned]="player.isBanned">
+            <div class="admin-player__info">
+              <span class="admin-player__name">{{ player.username }}</span>
+              <span class="admin-player__email">{{ player.email }}</span>
+              <div class="admin-player__badges">
+                @if (player.isAdmin)     { <span class="badge badge--admin">Admin</span> }
+                @if (player.isModerator) { <span class="badge badge--mod">Mod</span> }
+                @if (player.isBanned)    { <span class="badge badge--banned">Banned</span> }
+              </div>
+            </div>
+            <div class="admin-player__actions">
+              @if (!player.isAdmin) {
+                <button
+                  class="admin-btn"
+                  [class.active]="player.isModerator"
+                  (click)="toggleModerator(player)">
+                  {{ player.isModerator ? 'Remove Mod' : 'Make Mod' }}
+                </button>
+                @if (!player.isBanned) {
+                  <button class="admin-btn admin-btn--danger" (click)="ban(player)">Ban</button>
+                } @else {
+                  <button class="admin-btn admin-btn--success" (click)="unban(player)">Unban</button>
+                }
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+</div>

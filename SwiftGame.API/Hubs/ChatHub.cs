@@ -8,7 +8,6 @@ public class ChatHub(IChatService chatService) : Hub
 {
     public override async Task OnConnectedAsync()
     {
-        // Send message history to the newly connected client
         var history = chatService.GetRecentMessages();
         await Clients.Caller.SendAsync("ChatHistory", history);
         await base.OnConnectedAsync();
@@ -16,20 +15,24 @@ public class ChatHub(IChatService chatService) : Hub
 
     public async Task SendMessage(string message)
     {
-        var username = Context.User?.FindFirstValue("username")
-                    ?? Context.User?.FindFirstValue(ClaimTypes.Name);
-
+        var username = Context.User?.FindFirstValue("username");
         var isGuest = username is null;
+        var isBanned = Context.User?.FindFirstValue("isBanned") == "true";
         var display = username ?? "Guest";
 
-        // Rate limiting
+        if (isBanned)
+        {
+            await Clients.Caller.SendAsync("ChatError", "You are banned from chat.");
+            return;
+        }
+
         if (chatService.IsRateLimited(display))
         {
             await Clients.Caller.SendAsync("ChatError", "You're sending messages too fast.");
             return;
         }
 
-        var (allowed, filtered) = chatService.ProcessMessage(display, message, isGuest);
+        var (allowed, filtered) = chatService.ProcessMessage(display, message, isGuest, isBanned);
 
         if (!allowed)
         {
@@ -38,9 +41,22 @@ public class ChatHub(IChatService chatService) : Hub
         }
 
         var chatMessage = chatService.AddMessage(display, filtered, isGuest);
-
-        // Broadcast to all connected clients
         await Clients.All.SendAsync("ReceiveMessage", chatMessage);
+    }
+
+    public async Task DeleteMessage(string messageId)
+    {
+        var isAdmin = Context.User?.FindFirstValue("isAdmin") == "true";
+        var isModerator = Context.User?.FindFirstValue("isModerator") == "true";
+
+        if (!isAdmin && !isModerator)
+        {
+            await Clients.Caller.SendAsync("ChatError", "You don't have permission to delete messages.");
+            return;
+        }
+
+        chatService.DeleteMessage(messageId);
+        await Clients.All.SendAsync("MessageDeleted", messageId);
     }
 
     public async Task BroadcastSystemMessage(string message)

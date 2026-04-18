@@ -6,51 +6,59 @@ import { environment } from '../../environments/environment';
 import { SignalrService } from './signalr.service';
 
 export interface User {
-  id: string;
-  username: string;
-  email: string;
+  id:          string;
+  username:    string;
+  email:       string;
+  isAdmin:     boolean;
+  isModerator: boolean;
+  isBanned:    boolean;
 }
 
 export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
+  accessToken:       string;
+  refreshToken:      string;
   accessTokenExpiry: string;
-  user: User;
+  user:              User;
 }
 
 export interface RegisterRequest {
   username: string;
-  email: string;
+  email:    string;
   password: string;
 }
 
 export interface LoginRequest {
-  email: string;
+  email:    string;
   password: string;
 }
 
-const ACCESS_TOKEN_KEY = 'swiftgame_access_token';
+const ACCESS_TOKEN_KEY  = 'swiftgame_access_token';
 const REFRESH_TOKEN_KEY = 'swiftgame_refresh_token';
-const USER_KEY = 'swiftgame_user';
+const USER_KEY          = 'swiftgame_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly apiUrl = `${environment.apiUrl}/auth`;
 
-  // ── Signals ──────────────────────────────────────────────────────────────
-  private _user = signal<User | null>(this.loadUserFromStorage());
+  private _user    = signal<User | null>(this.loadUserFromStorage());
   private _loading = signal(false);
-  private _error = signal<string | null>(null);
+  private _error   = signal<string | null>(null);
 
-  readonly user = this._user.asReadonly();
-  readonly loading = this._loading.asReadonly();
-  readonly error = this._error.asReadonly();
+  readonly user            = this._user.asReadonly();
+  readonly loading         = this._loading.asReadonly();
+  readonly error           = this._error.asReadonly();
   readonly isAuthenticated = computed(() => this._user() !== null);
-  readonly username = computed(() => this._user()?.username ?? 'Guest');
+  readonly username        = computed(() => this._user()?.username ?? 'Guest');
+  readonly isAdmin         = computed(() => this._user()?.isAdmin ?? false);
+  readonly isModerator     = computed(() => this._user()?.isModerator ?? false);
+  readonly canModerate     = computed(() => this._user()?.isAdmin || this._user()?.isModerator || false);
+  readonly isBanned        = computed(() => this._user()?.isBanned ?? false);
 
-  constructor(private http: HttpClient, private router: Router, private injector: Injector) {}
-
-  // ── Register ─────────────────────────────────────────────────────────────
+  constructor(
+    private http:     HttpClient,
+    private router:   Router,
+    private injector: Injector
+  ) {}
 
   register(req: RegisterRequest) {
     this._loading.set(true);
@@ -66,8 +74,6 @@ export class AuthService {
     );
   }
 
-  // ── Login ─────────────────────────────────────────────────────────────────
-
   login(req: LoginRequest) {
     this._loading.set(true);
     this._error.set(null);
@@ -82,8 +88,6 @@ export class AuthService {
     );
   }
 
-  // ── Refresh ───────────────────────────────────────────────────────────────
-
   refresh() {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (!refreshToken) return of(null);
@@ -92,19 +96,13 @@ export class AuthService {
       .post<AuthResponse>(`${this.apiUrl}/refresh`, { refreshToken })
       .pipe(
         tap(res => this.handleAuthSuccess(res)),
-        catchError(() => {
-          this.logout();
-          return of(null);
-        })
+        catchError(() => { this.logout(); return of(null); })
       );
   }
-
-  // ── Logout ────────────────────────────────────────────────────────────────
 
   logout() {
     const token = this.getAccessToken();
     if (token) {
-      // Fire-and-forget — invalidate server-side refresh token
       this.http.post(`${this.apiUrl}/logout`, {}).subscribe();
     }
     this.clearStorage();
@@ -112,12 +110,10 @@ export class AuthService {
     this.router.navigate(['/']);
   }
 
-  // ── Token helpers ─────────────────────────────────────────────────────────
-
   getAccessToken(): string | null {
     return localStorage.getItem(ACCESS_TOKEN_KEY);
   }
-
+  
   isTokenExpiredSoon(thresholdSeconds = 60): boolean {
     const token = this.getAccessToken();
     if (!token) return true;
@@ -131,19 +127,27 @@ export class AuthService {
     }
   }
 
-  // ── Internal helpers ──────────────────────────────────────────────────────
-
   private handleAuthSuccess(res: AuthResponse | null) {
     if (!res) return;
-    localStorage.setItem(ACCESS_TOKEN_KEY, res.accessToken);
+
+    // Parse role claims from JWT to ensure they're current
+    const payload    = JSON.parse(atob(res.accessToken.split('.')[1]));
+    const user: User = {
+      id:          res.user.id,
+      username:    res.user.username,
+      email:       res.user.email,
+      isAdmin:     payload['isAdmin']     === 'true',
+      isModerator: payload['isModerator'] === 'true',
+      isBanned:    payload['isBanned']    === 'true',
+    };
+
+    localStorage.setItem(ACCESS_TOKEN_KEY,  res.accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, res.refreshToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(res.user));
-    this._user.set(res.user);
+    localStorage.setItem(USER_KEY,          JSON.stringify(user));
+    this._user.set(user);
     this._loading.set(false);
     this._error.set(null);
 
-    // Reconnect chat with new token
-    console.log('handleAuthSuccess called, attempting reconnect...');
     this.injector.get(SignalrService).reconnectChat();
   }
 
@@ -157,8 +161,6 @@ export class AuthService {
     try {
       const raw = localStorage.getItem(USER_KEY);
       return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   }
 }

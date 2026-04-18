@@ -10,6 +10,7 @@ public interface IPlayerRepository
     Task<Player?> GetByEmailAsync(string email);
     Task<Player?> GetByIdAsync(Guid id);
     Task<Player?> GetByRefreshTokenAsync(string refreshToken);
+    Task<IReadOnlyList<Player>> GetAllPlayersAsync();
 
     Task CreateAsync(Player player);
     Task UpdateAsync(Player player);

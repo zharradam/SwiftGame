@@ -193,3 +193,42 @@
   padding: 0.25rem 0;
   opacity: 0.8;
 }
+
+.chat-delete {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  color: #fca5a5;
+  font-size: 0.6rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  grid-column: 2;
+  grid-row: 2;
+  text-align: right;
+  align-self: end;
+  transition: all 0.15s;
+  width: fit-content;
+  margin-left: auto;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ff6363;
+  }
+}
+
+.chat-admin-btn {
+  background: rgba(232, 121, 249, 0.1);
+  border: 1px solid rgba(232, 121, 249, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  opacity: 0.8;
+  transition: all 0.15s;
+  margin-right: 0.5rem;  // 👈 push it left of the count
+
+  &:hover {
+    opacity: 1;
+    background: rgba(232, 121, 249, 0.2);
+  }
+}

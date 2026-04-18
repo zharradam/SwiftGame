@@ -4,22 +4,24 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { SignalrService, ChatMessage } from '../../services/signalr.service';
 import { AuthService } from '../../services/auth.service';
+import { AdminPanelComponent } from '../admin-panel/admin-panel.component';
 
 @Component({
   selector: 'swiftgame-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AdminPanelComponent],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss'
 })
 export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
-  messages:     ChatMessage[] = [];
-  inputText:    string        = '';
-  errorMessage: string        = '';
+  messages:      ChatMessage[] = [];
+  inputText:     string        = '';
+  errorMessage:  string        = '';
+  showAdminPanel: boolean      = false;
   private shouldScroll  = false;
   private subscriptions: Subscription[] = [];
 
-  @ViewChild('messageList') messageList!: ElementRef<HTMLDivElement>;
+  @ViewChild('messageList')  messageList!:  ElementRef<HTMLDivElement>;
   @ViewChild('scrollAnchor') scrollAnchor!: ElementRef<HTMLDivElement>;
   @Output() openLogin = new EventEmitter<void>();
 
@@ -28,8 +30,8 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   ngOnInit(): void {
     this.subscriptions.push(
       this.signalr.allMessages.subscribe(messages => {
-        this.messages     = messages;
-        this.shouldScroll = true;   // 👈 just set the flag
+        this.messages    = messages;
+        this.shouldScroll = true;
       })
     );
 
@@ -57,7 +59,11 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (!text || !this.auth.isAuthenticated()) return;
     this.signalr.sendChatMessage(text);
     this.inputText    = '';
-    this.shouldScroll = true;  // 👈 trigger scroll on send too
+    this.shouldScroll = true;
+  }
+
+  deleteMessage(messageId: string): void {
+    this.signalr.deleteMessage(messageId);
   }
 
   onKeyDown(event: KeyboardEvent): void {
@@ -69,5 +75,16 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   private scrollToBottom(): void {
     this.scrollAnchor?.nativeElement?.scrollIntoView({ behavior: 'instant' });
+  }
+
+  formatTime(timestamp: string): string {
+    try {
+      return new Date(timestamp).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return timestamp;
+    }
   }
 }

@@ -16,7 +16,7 @@ type Tab = 'game' | 'leaderboard' | 'chat';
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
-  title = "Isabelle's Taylor Swift Music Quiz";
+  title = "Swiftology";
 
   showAuthModal = false;
   authModalMode: 'login' | 'register' = 'login';

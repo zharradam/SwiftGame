@@ -143,8 +143,11 @@ builder.Services.AddScoped<IPlayerRepository>(sp =>
 var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
-app.MapOpenApi();
-app.MapScalarApiReference();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
 
 if (!app.Environment.IsDevelopment())
 {

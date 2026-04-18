@@ -34,7 +34,7 @@ export class GameComponent implements OnInit, OnDestroy {
   playerRank:        number   = 0;
   totalPlayers:      number   = 0;
   countdownKey:      number   = 0;
-  readonly gameTitle: string = 'Isabelle\'s Taylor Swift Music Quiz';
+  readonly gameTitle: string = 'Swiftology - the Taylor Swift Music Quiz';
 
   @Output() openLogin    = new EventEmitter<void>();
   @Output() openRegister = new EventEmitter<void>();

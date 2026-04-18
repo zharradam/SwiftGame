@@ -29,7 +29,10 @@ public class JwtService(IConfiguration config) : IJwtService
         {
             new Claim(JwtRegisteredClaimNames.Sub, player.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, player.Email),
-            new Claim("username", player.Username),
+            new Claim("username",    player.Username),
+            new Claim("isAdmin",     player.IsAdmin.ToString().ToLower()),
+            new Claim("isModerator", player.IsModerator.ToString().ToLower()),
+            new Claim("isBanned",    player.IsBanned.ToString().ToLower()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
@@ -63,18 +66,11 @@ public class JwtService(IConfiguration config) : IJwtService
             ValidIssuer = _settings.Issuer,
             ValidateAudience = true,
             ValidAudience = _settings.Audience,
-            // Allow expired tokens during refresh flow
             ValidateLifetime = false
         };
 
-        try
-        {
-            return handler.ValidateToken(token, validationParams, out _);
-        }
-        catch
-        {
-            return null;
-        }
+        try { return handler.ValidateToken(token, validationParams, out _); }
+        catch { return null; }
     }
 }
 

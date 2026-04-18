@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SwiftGame.Data;
 using SwiftGame.Data.Entities;
 using SwiftGame.Data.Repositories;
 
@@ -20,6 +21,12 @@ public class PlayerRepository(SwiftGameDbContext db) : IPlayerRepository
 
     public Task<Player?> GetByRefreshTokenAsync(string refreshToken) =>
         db.Players.FirstOrDefaultAsync(p => p.RefreshToken == refreshToken);
+
+    public async Task<IReadOnlyList<Player>> GetAllPlayersAsync() =>
+        await db.Players
+            .Where(p => p.Id != Guid.Empty)  // exclude guest
+            .OrderBy(p => p.Username)
+            .ToListAsync();
 
     public async Task CreateAsync(Player player)
     {
