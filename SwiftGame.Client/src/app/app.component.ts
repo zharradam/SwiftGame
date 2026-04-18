@@ -1,12 +1,12 @@
-// SwiftGame.Client/src/app/app.component.ts
-
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameComponent } from './components/game/game.component';
 import { LeaderboardComponent } from './components/leaderboard/leaderboard.component';
 import { AuthModalComponent } from './components/auth-modal/auth-modal.component';
-import { AuthService } from './services/auth.service';
 import { ChatComponent } from './components/chat/chat.component';
+import { AuthService } from './services/auth.service';
+
+type Tab = 'game' | 'leaderboard' | 'chat';
 
 @Component({
   selector: 'app-root',
@@ -20,6 +20,7 @@ export class AppComponent {
 
   showAuthModal = false;
   authModalMode: 'login' | 'register' = 'login';
+  activeTab: Tab = 'game';
 
   constructor(readonly auth: AuthService) {}
 
@@ -31,5 +32,9 @@ export class AppComponent {
   openRegister() {
     this.authModalMode = 'register';
     this.showAuthModal = true;
+  }
+
+  setTab(tab: Tab) {
+    this.activeTab = tab;
   }
 }

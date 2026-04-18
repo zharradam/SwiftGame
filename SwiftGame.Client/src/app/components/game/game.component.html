@@ -2,7 +2,7 @@
 
   <!-- Start screen -->
   <div class="start-screen" *ngIf="!gameStarted">
-    <div class="game-header">
+    <div class="game-header hide-mobile">
       <h1 class="game-title">{{ gameTitle }}</h1>
       <p class="game-subtitle">HOW WELL DO YOU KNOW TAYLOR SWIFT?</p>
     </div>
@@ -111,7 +111,7 @@
     <!-- Playing / Answered -->
     <ng-container *ngIf="(state === 'playing' || state === 'answered') && !gameOver">
 
-      <div class="game-header">
+      <div class="game-header hide-mobile">
         <h1 class="game-title">{{ gameTitle }}</h1>
         <p class="game-subtitle">Guess the Taylor Swift song!</p>
       </div>

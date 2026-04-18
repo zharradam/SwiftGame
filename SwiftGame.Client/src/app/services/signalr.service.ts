@@ -22,16 +22,14 @@ export class SignalrService implements OnDestroy {
 
   // ── Chat ──────────────────────────────────────────────────────────────────
   private chatConnection: signalR.HubConnection;
-  private chatMessage$  = new Subject<ChatMessage>();
-  private chatHistory$  = new BehaviorSubject<ChatMessage[]>([]);
+  private allMessages$  = new BehaviorSubject<ChatMessage[]>([]);
   private chatError$    = new Subject<string>();
 
-  readonly chatMessage  = this.chatMessage$.asObservable();
-  readonly chatHistory  = this.chatHistory$.asObservable();
+  readonly allMessages  = this.allMessages$.asObservable();
   readonly chatError    = this.chatError$.asObservable();
 
   constructor(private auth: AuthService) {
-    // ── Leaderboard connection (no auth needed) ───────────────────────────
+    // ── Leaderboard connection ────────────────────────────────────────────
     this.leaderboardConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${environment.hubUrl}/hubs/leaderboard`)
       .withAutomaticReconnect()
@@ -48,7 +46,7 @@ export class SignalrService implements OnDestroy {
     this.leaderboardConnection.onreconnected(() => console.log('Leaderboard SignalR reconnected'));
     this.leaderboardConnection.onclose(()     => console.log('Leaderboard SignalR closed'));
 
-    // ── Chat connection (passes JWT for username resolution) ──────────────
+    // ── Chat connection ───────────────────────────────────────────────────
     this.chatConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${environment.hubUrl}/hubs/chat`, {
         accessTokenFactory: () => this.auth.getAccessToken() ?? ''
@@ -57,11 +55,13 @@ export class SignalrService implements OnDestroy {
       .build();
 
     this.chatConnection.on('ReceiveMessage', (message: ChatMessage) => {
-      this.chatMessage$.next(message);
+      // Append to the single shared message list
+      this.allMessages$.next([...this.allMessages$.value, message]);
     });
 
     this.chatConnection.on('ChatHistory', (messages: ChatMessage[]) => {
-      this.chatHistory$.next(messages);
+      // Replace with full history on connect
+      this.allMessages$.next(messages);
     });
 
     this.chatConnection.on('ChatError', (error: string) => {
@@ -83,11 +83,6 @@ export class SignalrService implements OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    this.leaderboardConnection.stop();
-    this.chatConnection.stop();
-  }
-
   reconnectChat(): void {
     console.log('Reconnecting chat with token:', this.auth.getAccessToken() ? 'present' : 'empty');
     this.chatConnection.stop().then(() => {
@@ -95,5 +90,10 @@ export class SignalrService implements OnDestroy {
         .then(() => console.log('Chat SignalR reconnected with auth'))
         .catch(err => console.error('Chat reconnect failed:', err));
     });
+  }
+
+  ngOnDestroy(): void {
+    this.leaderboardConnection.stop();
+    this.chatConnection.stop();
   }
 }

@@ -1,4 +1,3 @@
-<!-- Auth modal (global, renders on top of everything) -->
 @if (showAuthModal) {
   <app-auth-modal
     [initialMode]="authModalMode"
@@ -8,10 +7,9 @@
 
 <div class="app-layout">
 
-  <!-- Global header with login/logout -->
+  <!-- Header -->
   <header class="app-header">
     <span class="app-header__title">🎵 {{ title }}</span>
-
     <div class="app-header__auth">
       @if (auth.isAuthenticated()) {
         <span class="user-chip">👤 {{ auth.username() }}</span>
@@ -23,6 +21,7 @@
     </div>
   </header>
 
+  <!-- Desktop: three column layout -->
   <div class="app-body">
     <aside class="app-sidebar">
       <swiftgame-leaderboard />
@@ -36,5 +35,42 @@
       <swiftgame-chat (openLogin)="openLogin()" />
     </aside>
   </div>
+
+  <!-- Mobile: tab panels — use *ngIf so only one instance exists at a time -->
+  <div class="app-mobile">
+    <div class="app-mobile__panel" [class.active]="activeTab === 'game'">
+      @if (activeTab === 'game') {
+        <swiftgame-game
+          (openLogin)="openLogin()"
+          (openRegister)="openRegister()" />
+      }
+    </div>
+    <div class="app-mobile__panel" [class.active]="activeTab === 'leaderboard'">
+      @if (activeTab === 'leaderboard') {
+        <swiftgame-leaderboard />
+      }
+    </div>
+    <div class="app-mobile__panel app-mobile__panel--chat" [class.active]="activeTab === 'chat'">
+      @if (activeTab === 'chat') {
+        <swiftgame-chat (openLogin)="openLogin()" />
+      }
+    </div>
+  </div>
+
+  <!-- Mobile: tab bar -->
+  <nav class="app-tabs">
+    <button class="app-tabs__tab" [class.active]="activeTab === 'game'" (click)="setTab('game')">
+      <span class="app-tabs__icon">🎵</span>
+      <span class="app-tabs__label">Game</span>
+    </button>
+    <button class="app-tabs__tab" [class.active]="activeTab === 'leaderboard'" (click)="setTab('leaderboard')">
+      <span class="app-tabs__icon">🏆</span>
+      <span class="app-tabs__label">Scores</span>
+    </button>
+    <button class="app-tabs__tab" [class.active]="activeTab === 'chat'" (click)="setTab('chat')">
+      <span class="app-tabs__icon">💬</span>
+      <span class="app-tabs__label">Chat</span>
+    </button>
+  </nav>
 
 </div>

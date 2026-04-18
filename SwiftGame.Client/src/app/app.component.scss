@@ -1,9 +1,9 @@
-
 // ── Overall shell ─────────────────────────────────────────────────────────────
 .app-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -18,6 +18,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-shrink: 0;
 
   &__title {
     font-size: 1rem;
@@ -71,38 +72,23 @@
   &:hover { opacity: 0.88; }
 }
 
-// ── Overall shell ─────────────────────────────────────────────────────────────
-.app-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;          // 👈 was min-height
-  overflow: hidden;       // 👈 prevent outer scroll
-}
-
-// ── Body (sidebar + main) ─────────────────────────────────────────────────────
+// ── Desktop body ──────────────────────────────────────────────────────────────
 .app-body {
   display: grid;
   grid-template-columns: 340px 1fr 600px;
   flex: 1;
-  min-height: 0;          // 👈 critical — allows children to shrink in flex/grid
+  min-height: 0;
   overflow: hidden;
 }
 
 .app-sidebar {
   position: sticky;
   top: 0;
-  height: 100%;           // 👈 was 100vh
+  height: 100%;
   overflow-y: auto;
   padding: 1.5rem 1rem 1.5rem 1.5rem;
   background: rgba(255, 255, 255, 0.02);
   border-right: 1px solid rgba(255, 105, 180, 0.1);
-}
-
-.app-chat {
-  padding: 1rem;
-  border-left: 1px solid rgba(255, 105, 180, 0.1);
-  height: 100%;           // 👈 was 100vh
-  overflow-y: auto;
 }
 
 .app-main {
@@ -110,27 +96,146 @@
   align-items: flex-start;
   justify-content: center;
   padding: 3rem 2rem;
-  height: 100%;           // 👈 was min-height: 100vh
-  overflow-y: auto;       // 👈 was scroll
+  height: 100%;
+  overflow: hidden;
 }
 
-// ── Responsive ────────────────────────────────────────────────────────────────
-@media (max-width: 1100px) {   // 👈 raised breakpoint for three columns
+.app-chat {
+  padding: 1rem;
+  border-left: 1px solid rgba(255, 105, 180, 0.1);
+  height: 100%;
+  overflow-y: auto;
+}
+
+// ── Mobile panels (hidden on desktop) ─────────────────────────────────────────
+.app-mobile {
+  display: none;
+}
+
+// ── Mobile tab bar (hidden on desktop) ────────────────────────────────────────
+.app-tabs {
+  display: none;
+}
+
+// ── Mobile breakpoint ─────────────────────────────────────────────────────────
+@media (max-width: 1100px) {
+
+  .app-layout {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  // Hide desktop layout
   .app-body {
-    grid-template-columns: 1fr;
+    display: none;
   }
 
-  .app-sidebar, .app-chat {
+  // Show mobile panels
+  .app-mobile {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     position: relative;
-    height: auto;
-    border-right: none;
-    border-left: none;
-    border-bottom: 1px solid rgba(255, 105, 180, 0.1);
-    padding: 1.5rem;
+
+    &__panel {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+
+      &.active {
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        padding: 0.75rem;
+      }
+    }
   }
 
-  .app-main {
-    padding: 1.5rem;
-    height: auto;
+  // Show tab bar
+  .app-tabs {
+    display: flex;
+    flex-shrink: 0;
+    border-top: 1px solid rgba(232, 121, 249, 0.15);
+    background: rgba(10, 5, 20, 0.95);
+    backdrop-filter: blur(8px);
+
+    &__tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.6rem 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+
+      &.active {
+        .app-tabs__icon { opacity: 1; }
+        .app-tabs__label { color: #f0abfc; }
+        background: rgba(232, 121, 249, 0.08);
+      }
+
+      &:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.03);
+      }
+    }
+
+    &__icon {
+      font-size: 1.2rem;
+      opacity: 0.5;
+      transition: opacity 0.15s;
+    }
+
+    &__label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color 0.15s;
+    }
   }
+}
+
+@media (max-width: 1100px) {
+  .app-header {
+    padding: 0.5rem 0.75rem;
+    
+    &__title {
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+      text-shadow:
+        0 1px 0 #9d174d,
+        0 2px 0 #7e1d4a,
+        0 3px 6px rgba(232, 121, 249, 0.4);
+      -webkit-text-fill-color: #f0abfc;
+    }
+
+    &__auth {
+      gap: 0.4rem;
+    }
+  }
+
+  .user-chip {
+    font-size: 0.7rem;
+  }
+
+  .btn-ghost {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .btn-primary {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+  }
+}
+
+.app-mobile__panel--chat.active {
+  padding: 0;
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -12,11 +12,11 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss'
 })
-export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
-  messages:    ChatMessage[] = [];
-  inputText:   string        = '';
-  errorMessage: string       = '';
-  private shouldScroll = false;
+export class ChatComponent implements OnInit, OnDestroy {
+  messages:     ChatMessage[] = [];
+  inputText:    string        = '';
+  errorMessage: string        = '';
+  private shouldScroll  = false;
   private subscriptions: Subscription[] = [];
 
   @ViewChild('messageList') messageList!: ElementRef<HTMLDivElement>;
@@ -28,36 +28,23 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   ) {}
 
   ngOnInit(): void {
-    // Load history
     this.subscriptions.push(
-      this.signalr.chatHistory.subscribe(history => {
-        this.messages    = history;
-        this.shouldScroll = true;
+      this.signalr.allMessages.subscribe(messages => {
+        this.messages = messages;
+        queueMicrotask(() => {
+          requestAnimationFrame(() => {
+            this.scrollToBottom();
+          });
+        });
       })
     );
 
-    // Live messages
-    this.subscriptions.push(
-      this.signalr.chatMessage.subscribe(message => {
-        this.messages.push(message);
-        this.shouldScroll = true;
-      })
-    );
-
-    // Errors
     this.subscriptions.push(
       this.signalr.chatError.subscribe(error => {
         this.errorMessage = error;
         setTimeout(() => this.errorMessage = '', 3000);
       })
     );
-  }
-
-  ngAfterViewChecked(): void {
-    if (this.shouldScroll) {
-      this.scrollToBottom();
-      this.shouldScroll = false;
-    }
   }
 
   ngOnDestroy(): void {
@@ -67,9 +54,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   send(): void {
     const text = this.inputText.trim();
     if (!text || !this.auth.isAuthenticated()) return;
-
     this.signalr.sendChatMessage(text);
     this.inputText = '';
+    // Scroll after send — message arrives via subscription but DOM needs a tick
+    setTimeout(() => this.scrollToBottom(), 150);
   }
 
   onKeyDown(event: KeyboardEvent): void {
@@ -80,9 +68,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private scrollToBottom(): void {
-    try {
-      const el = this.messageList?.nativeElement;
-      if (el) el.scrollTop = el.scrollHeight;
-    } catch {}
+    const el = this.messageList?.nativeElement;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   }
 }
