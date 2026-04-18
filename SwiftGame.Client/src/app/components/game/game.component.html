@@ -28,6 +28,16 @@
       </div>
     </div>
 
+    <div class="guest-prompt" *ngIf="!auth.isAuthenticated()">
+      <p>🎵 Playing as guest — scores won't be saved to your profile!</p>
+      <p>
+        <button class="btn-link" (click)="onSignUpClick()">Sign up free</button>
+        or
+        <button class="btn-link" (click)="onLoginClick()">log in</button>
+        to appear on the leaderboard.
+      </p>
+    </div>
+
     <button class="btn-primary btn-large" (click)="startGame()">
       Play Now
     </button>
@@ -111,6 +121,17 @@
              alt="Taylor Swift on stage"
              class="stage-img"
              (error)="currentImageUrl = ''"/>
+
+          <div class="countdown-fullscreen" *ngIf="isCountingDown">
+            <div class="countdown-content">
+              <p class="countdown-label">Next question in</p>
+              <ng-container *ngIf="isCountingDown">
+                <div class="countdown-number" *ngIf="countdown > 0">
+                  {{ countdown }}
+                </div>
+              </ng-container>
+            </div>
+          </div>
       </div>
 
       <div class="game-progress">
@@ -165,13 +186,6 @@
             <span class="result-points">+{{ result.pointsEarned | number }}</span>
             <span class="result-time">{{ formatTime(result.responseTimeMs) }}</span>
           </div>
-        </div>
-
-        <div class="countdown-overlay" *ngIf="isCountingDown">
-          <div class="countdown-circle">
-            <span class="countdown-number">{{ countdown }}</span>
-          </div>
-          <p class="countdown-text">Next question in...</p>
         </div>
       </div>
 

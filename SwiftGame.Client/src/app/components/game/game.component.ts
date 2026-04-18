@@ -1,6 +1,7 @@
-import { Component, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, ElementRef, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameService, RoundResponse, SubmitAnswerResponse } from '../../services/game.service';
+import { AuthService } from '../../services/auth.service';
 
 type GameState = 'loading' | 'playing' | 'answered' | 'error';
 
@@ -32,9 +33,14 @@ export class GameComponent implements OnInit, OnDestroy {
   isCountingDown:    boolean  = false;
   playerRank:        number   = 0;
   totalPlayers:      number   = 0;
+  countdownKey:      number   = 0;
   readonly gameTitle: string = 'Isabelle\'s Taylor Swift Music Quiz';
 
+  @Output() openLogin    = new EventEmitter<void>();
+  @Output() openRegister = new EventEmitter<void>();
+
   private imageQueue: number[] = [];
+  private usedSongIds: string[] = [];
   private fireworksAnimationId: number = 0;
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
   private timerInterval:     ReturnType<typeof setInterval> | null = null;
@@ -45,7 +51,7 @@ export class GameComponent implements OnInit, OnDestroy {
 
   @ViewChild('fireworksCanvas') fireworksCanvas!: ElementRef<HTMLCanvasElement>;
 
-  constructor(private gameService: GameService) {}
+  constructor(private gameService: GameService, public auth: AuthService) {}
 
   ngOnInit(): void {
     this.gameService.getConfig().subscribe({
@@ -67,6 +73,15 @@ export class GameComponent implements OnInit, OnDestroy {
     this.stopCountdown();
   }
 
+
+
+onLoginClick()  { this.openLogin.emit(); }
+onSignUpClick() { this.openRegister.emit(); }
+
+  get playerId(): string {
+    return this.auth.user()?.id ?? '00000000-0000-0000-0000-000000000000';
+  }
+
   loadRound(): void {
     this.stopCountdown();
     this.state          = 'loading';
@@ -76,7 +91,7 @@ export class GameComponent implements OnInit, OnDestroy {
     this.elapsedMs      = 0;
     this.stopAudio();
 
-    this.gameService.getRound().subscribe({
+    this.gameService.getRound(this.usedSongIds).subscribe({
       next:  (round) => this.startPlaying(round),
       error: (err)   => {
         this.state        = 'error';
@@ -87,6 +102,7 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   private startPlaying(round: RoundResponse): void {
+    this.usedSongIds.push(round.songDbId);
     this.currentQuestion++;
     this.round          = round;
     this.result         = null;
@@ -111,7 +127,8 @@ export class GameComponent implements OnInit, OnDestroy {
       provider:       this.round.provider,
       selectedTitle:  choice,
       responseTimeMs: this.elapsedMs,
-      sessionId:      this.sessionId
+      sessionId:      this.sessionId,
+      playerId:       this.playerId
     }).subscribe({
       next: (result) => {
         this.result      = result;
@@ -158,21 +175,23 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   startGame(): void {
+    this.usedSongIds = [];
     this.gameStarted = true;
-    this.gameService.startSession().subscribe({
+    this.gameService.startSession(this.playerId).subscribe({
       next: (response) => {
         this.sessionId = response.sessionId;
         this.buildImageQueue();
         this.loadRound();
       },
-      error: () => {
-        this.buildImageQueue();
-        this.loadRound();
+      error: (err) => {
+        console.error('Failed to start session:', err);
+        this.gameStarted = false;  // drop back to home screen rather than starting a broken game
       }
     });
   }
 
   restartGame(): void {
+    this.usedSongIds = [];
     if (this.fireworksAnimationId) {
       cancelAnimationFrame(this.fireworksAnimationId);
       this.fireworksAnimationId = 0;
@@ -186,7 +205,7 @@ export class GameComponent implements OnInit, OnDestroy {
     this.totalPlayers      = 0;
     this.stopCountdown();
 
-    this.gameService.startSession().subscribe({
+    this.gameService.startSession(this.playerId).subscribe({
       next: (response) => {
         this.sessionId = response.sessionId;
         this.buildImageQueue();
@@ -261,6 +280,12 @@ export class GameComponent implements OnInit, OnDestroy {
     this.startTime     = Date.now();
     this.timerInterval = setInterval(() => {
       this.elapsedMs = Date.now() - this.startTime;
+
+      // Auto-timeout after 10 seconds
+      if (this.elapsedMs >= 10000 && this.state === 'playing') {
+        this.stopTimer();
+        this.selectChoice('__timeout__');
+      }
     }, 10);
   }
 
@@ -276,9 +301,11 @@ export class GameComponent implements OnInit, OnDestroy {
   private startCountdown(seconds: number, onComplete: () => void): void {
     this.isCountingDown = true;
     this.countdown      = seconds;
+    this.countdownKey++;
 
     this.countdownInterval = setInterval(() => {
       this.countdown--;
+      this.countdownKey++;
       if (this.countdown <= 0) {
         this.stopCountdown();
         onComplete();

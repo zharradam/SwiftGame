@@ -6,5 +6,6 @@ public class SubmitAnswerRequest
     public string Provider { get; set; } = string.Empty;
     public string SelectedTitle { get; set; } = string.Empty;
     public int ResponseTimeMs { get; set; }
-    public Guid SessionId { get; set; }
+    public string SessionId { get; set; } = string.Empty;
+    public string? PlayerId { get; set; }
 }

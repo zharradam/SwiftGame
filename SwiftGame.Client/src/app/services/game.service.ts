@@ -5,24 +5,11 @@ import { environment } from '../../environments/environment';
 
 export interface RoundResponse {
   songId: string;
+  songDbId: string;
   provider: string;
   previewUrl: string;
   startAt: number;
   choices: string[];
-}
-
-export interface SubmitAnswerRequest {
-  songId: string;
-  provider: string;
-  selectedTitle: string;
-  responseTimeMs: number;
-}
-
-export interface SubmitAnswerResponse {
-  isCorrect: boolean;
-  pointsEarned: number;
-  correctTitle: string;
-  responseTimeMs: number;
 }
 
 export interface LeaderboardEntry {
@@ -45,15 +32,25 @@ export interface SubmitAnswerRequest {
   selectedTitle:  string;
   responseTimeMs: number;
   sessionId:      string;
+  playerId:       string;
+}
+
+export interface SubmitAnswerResponse {
+  isCorrect: boolean;
+  pointsEarned: number;
+  correctTitle: string;
+  responseTimeMs: number;
 }
 
 export interface StartSessionResponse {
   sessionId: string;
+  playerId:  string;
 }
 
 export interface EndSessionResponse {
   rank:         number;
   totalPlayers: number;
+  playerId:     string;
 }
 
 @Injectable({
@@ -64,8 +61,11 @@ export class GameService {
 
   constructor(private http: HttpClient) {}
 
-  getRound(): Observable<RoundResponse> {
-    return this.http.get<RoundResponse>(`${this.apiUrl}/game/round`);
+  getRound(excludeIds: string[] = []): Observable<RoundResponse> {
+    const params = excludeIds.length 
+      ? `?excludeIds=${excludeIds.join(',')}` 
+      : '';
+    return this.http.get<RoundResponse>(`${this.apiUrl}/game/round${params}`);
   }
 
   submitAnswer(request: SubmitAnswerRequest): Observable<SubmitAnswerResponse> {
@@ -85,13 +85,17 @@ export class GameService {
     return this.http.get<GameConfig>(`${this.apiUrl}/game/config`);
   }
 
-  startSession(): Observable<StartSessionResponse> {
+  startSession(playerId?: string): Observable<StartSessionResponse> {
     return this.http.post<StartSessionResponse>(
-      `${this.apiUrl}/game/session/start`, {});
+      `${this.apiUrl}/game/session/start`,
+      { playerId: playerId ?? '00000000-0000-0000-0000-000000000000' }
+    );
   }
 
   endSession(sessionId: string): Observable<EndSessionResponse> {
     return this.http.post<EndSessionResponse>(
-      `${this.apiUrl}/game/session/end`, { sessionId });
+      `${this.apiUrl}/game/session/end`,
+      { sessionId }
+    );
   }
 }

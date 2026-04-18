@@ -14,7 +14,7 @@ export class SignalrService implements OnDestroy {
 
   constructor() {
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${environment.apiUrl.replace('/api', '')}/hubs/leaderboard`)
+      .withUrl(`${environment.hubUrl}/hubs/leaderboard`)
       .withAutomaticReconnect()
       .build();
 

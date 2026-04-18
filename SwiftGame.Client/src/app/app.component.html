@@ -1,8 +1,37 @@
+<!-- Auth modal (global, renders on top of everything) -->
+@if (showAuthModal) {
+  <app-auth-modal
+    [initialMode]="authModalMode"
+    (close)="showAuthModal = false"
+    (authenticated)="showAuthModal = false" />
+}
+
 <div class="app-layout">
-  <aside class="app-sidebar">
-    <swiftgame-leaderboard />
-  </aside>
-  <main class="app-main">
-    <swiftgame-game />
-  </main>
+
+  <!-- Global header with login/logout -->
+  <header class="app-header">
+    <span class="app-header__title">🎵 {{ title }}</span>
+
+    <div class="app-header__auth">
+      @if (auth.isAuthenticated()) {
+        <span class="user-chip">👤 {{ auth.username() }}</span>
+        <button class="btn-ghost" (click)="auth.logout()">Log out</button>
+      } @else {
+        <button class="btn-ghost" (click)="openLogin()">Log In</button>
+        <button class="btn-primary" (click)="openRegister()">Sign Up</button>
+      }
+    </div>
+  </header>
+
+  <div class="app-body">
+    <aside class="app-sidebar">
+      <swiftgame-leaderboard />
+    </aside>
+    <main class="app-main">
+      <swiftgame-game
+        (openLogin)="openLogin()"
+        (openRegister)="openRegister()" />
+    </main>
+  </div>
+
 </div>

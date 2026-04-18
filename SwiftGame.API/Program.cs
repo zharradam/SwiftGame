@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using SwiftGame.API.Hubs;
+using SwiftGame.API.Services;
 using SwiftGame.API.Settings;
 using SwiftGame.Data;
 using SwiftGame.Data.PostgreSql;
@@ -11,17 +14,72 @@ using SwiftGame.Music.Fallback;
 using SwiftGame.Music.iTunes;
 using SwiftGame.Music.Spotify;
 using SwiftGame.Music.Spotify.Config;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Controllers & API explorer ────────────────────────────────────────────────
 builder.Services.AddControllers();
+builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.Configure<GameSettings>(
     builder.Configuration.GetSection("GameSettings"));
 
-// ── CORS (for Angular dev server on localhost:4200) ───────────────────────────
+// ── JWT Authentication ────────────────────────────────────────────────────────
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var secret = jwtSettings["Secret"]
+    ?? throw new InvalidOperationException("Jwt:Secret not configured.");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidateAudience = true,
+        ValidAudience = jwtSettings["Audience"],
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromSeconds(30)
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // Manually extract Bearer token from Authorization header. Required due to a version compatibility issue between
+            // Microsoft.AspNetCore.Authentication.JwtBearer and Microsoft.IdentityModel.Tokens where the header is not automatically parsed.
+            var authHeader = context.Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(context.Token) &&
+                authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Token = authHeader.Substring("Bearer ".Length).Trim();
+            }
+
+            // Allow SignalR hubs to receive the token from the query string
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("SwiftGameClient", policy =>
@@ -47,13 +105,6 @@ IDbProviderFactory dbProviderFactory = dbProviderName switch
 
 builder.Services.AddSingleton<IDbProviderFactory>(dbProviderFactory);
 
-var connString = builder.Configuration.GetConnectionString("SwiftGameDb");
-var providerName = builder.Configuration["DatabaseProvider"];
-Console.WriteLine($"=== DB DEBUG ===");
-Console.WriteLine($"Provider: {providerName}");
-Console.WriteLine($"Connection: {connString}");
-Console.WriteLine($"================");
-
 builder.Services.AddDbContext<SwiftGameDbContext>(options =>
     dbProviderFactory.ConfigureDbContext(
         options,
@@ -61,22 +112,13 @@ builder.Services.AddDbContext<SwiftGameDbContext>(options =>
     )
 );
 
-// ── Redis cache (leaderboard) ─────────────────────────────────────────────────
-//builder.Services.AddStackExchangeRedisCache(options =>
-//{
-//options.Configuration = builder.Configuration.GetConnectionString("Redis");
-//options.InstanceName = "SwiftGame:";
-//});
-
 // ── Music provider factory ────────────────────────────────────────────────────
 builder.Services.Configure<SpotifyConfig>(
     builder.Configuration.GetSection("Spotify"));
 
-// Register both concrete factories
 builder.Services.AddHttpClient<SpotifyMusicFactory>();
 builder.Services.AddHttpClient<ItunesMusicFactory>();
 
-// The fallback factory is what the rest of the app sees —
 builder.Services.AddSingleton<IMusicProviderFactory>(sp =>
     new FallbackMusicFactory(
         sp.GetRequiredService<ItunesMusicFactory>(),
@@ -88,6 +130,13 @@ builder.Services.AddSingleton<IMusicProviderFactory>(sp =>
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddScoped<ISongRepository, SongRepository>();
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+builder.Services.AddScoped<IPlayerRepository>(sp =>
+{
+    var db = sp.GetRequiredService<SwiftGameDbContext>();
+    return dbProviderName == "PostgreSql"
+        ? new SwiftGame.Data.PostgreSql.Repositories.PlayerRepository(db)
+        : new SwiftGame.Data.SqlServer.Repositories.PlayerRepository(db);
+});
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -96,20 +145,23 @@ var app = builder.Build();
 app.MapOpenApi();
 app.MapScalarApiReference();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("SwiftGameClient");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<LeaderboardHub>("/hubs/leaderboard");
 
 // ── Auto-apply migrations on startup ─────────────────────────────────────────
-
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SwiftGameDbContext>();
     await db.Database.MigrateAsync();
 
-    // ── Seed guest player (placeholder until auth is implemented) ─────────────────
+    // Seed guest player for unauthenticated games
     var guestExists = await db.Players.AnyAsync(p => p.Id == Guid.Empty);
     if (!guestExists)
     {

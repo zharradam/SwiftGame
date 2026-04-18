@@ -1,4 +1,5 @@
 ﻿using SwiftGame.Data.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
 
 public class GameSession
 {
@@ -9,7 +10,6 @@ public class GameSession
     public bool IsComplete { get; set; }
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
-
     public Player Player { get; set; } = null!;
     public ICollection<Score> Scores { get; set; } = new List<Score>();
 }

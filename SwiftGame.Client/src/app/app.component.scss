@@ -1,7 +1,81 @@
+
+// ── Overall shell ─────────────────────────────────────────────────────────────
 .app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: rgba(10, 5, 20, 0.85);
+  border-bottom: 1px solid rgba(232, 121, 249, 0.15);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f0abfc;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  &__auth {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+}
+
+.user-chip {
+  font-size: 0.85rem;
+  color: #c084fc;
+  font-weight: 600;
+}
+
+.btn-ghost {
+  background: none;
+  border: 1px solid rgba(232, 121, 249, 0.35);
+  color: #c084fc;
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: rgba(232, 121, 249, 0.08);
+    border-color: #e879f9;
+  }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  border: none;
+  color: #fff;
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover { opacity: 0.88; }
+}
+
+// ── Body (sidebar + main) ─────────────────────────────────────────────────────
+.app-body {
   display: grid;
   grid-template-columns: 300px 1fr;
-  min-height: 100vh;
+  flex: 1;
 }
 
 .app-sidebar {
@@ -23,8 +97,9 @@
   overflow-y: scroll;
 }
 
+// ── Responsive ────────────────────────────────────────────────────────────────
 @media (max-width: 900px) {
-  .app-layout {
+  .app-body {
     grid-template-columns: 1fr;
   }
 

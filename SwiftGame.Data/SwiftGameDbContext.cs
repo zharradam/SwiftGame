@@ -87,7 +87,7 @@ public class SwiftGameDbContext : DbContext
                   .ValueGeneratedNever();
 
             entity.HasOne(g => g.Player)
-                  .WithMany()
+                  .WithMany(p => p.GameSessions)
                   .HasForeignKey(g => g.PlayerId)
                   .OnDelete(DeleteBehavior.Cascade);
         });

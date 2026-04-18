@@ -40,6 +40,8 @@ public class GameController : ControllerBase
         _hubContext = hubContext;
     }
 
+    // ── GET api/game/config ───────────────────────────────────────────────────
+
     [HttpGet("config")]
     public IActionResult GetConfig()
     {
@@ -52,11 +54,22 @@ public class GameController : ControllerBase
     }
 
     // ── GET api/game/round ────────────────────────────────────────────────────
+
     [HttpGet("round")]
-    public async Task<IActionResult> GetRound(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetRound([FromQuery] string? excludeIds, CancellationToken cancellationToken)
     {
-        // Pull 4 random songs directly from our catalogue
-        var songs = await _songRepository.GetRandomSongsAsync(4, cancellationToken);
+        var excluded = excludeIds?
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(id => Guid.TryParse(id, out var g) ? g : (Guid?)null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .ToList() ?? [];
+
+        var songs = await _songRepository.GetRandomSongsAsync(4, excluded, cancellationToken);
+
+        // Fallback — if not enough songs after exclusions, try without exclusions
+        if (songs.Count < 4)
+            songs = await _songRepository.GetRandomSongsAsync(4, null, cancellationToken);
 
         if (songs.Count < 4)
             return StatusCode(503, "Not enough songs in the catalogue — please seed the database first.");
@@ -74,23 +87,23 @@ public class GameController : ControllerBase
             .OrderBy(_ => Random.Shared.Next())
             .ToList();
 
-        var startAt = Random.Shared.Next(0, 20);
-
         return Ok(new RoundResponse
         {
             SongId = correct.ProviderId,
+            SongDbId = correct.Id,
             Provider = correct.Provider,
             PreviewUrl = preview.Url,
-            StartAt = startAt,
+            StartAt = Random.Shared.Next(10, 20),
             Choices = choices
         });
     }
 
     // ── POST api/game/submit ──────────────────────────────────────────────────
+
     [HttpPost("submit")]
     public async Task<IActionResult> SubmitAnswer(
-    [FromBody] SubmitAnswerRequest request,
-    CancellationToken cancellationToken)
+        [FromBody] SubmitAnswerRequest request,
+        CancellationToken cancellationToken)
     {
         var song = await _songRepository.GetByProviderIdAsync(
             request.SongId,
@@ -105,15 +118,16 @@ public class GameController : ControllerBase
             song.Title,
             StringComparison.OrdinalIgnoreCase);
 
-        var pointsEarned = isCorrect
-            ? CalculatePoints(request.ResponseTimeMs)
-            : 0;
+        var pointsEarned = isCorrect ? CalculatePoints(request.ResponseTimeMs) : 0;
+        var playerId = Guid.TryParse(request.PlayerId, out var pid) ? pid : Guid.Empty;
+        var sessionId = Guid.TryParse(request.SessionId, out var sid) ? sid : Guid.Empty;
+
 
         await _leaderboardRepository.AddScoreAsync(new Score
         {
             SongId = song.Id,
-            PlayerId = Guid.Empty,
-            GameSessionId = request.SessionId,
+            PlayerId = playerId,
+            GameSessionId = sessionId,
             PointsEarned = pointsEarned,
             ResponseTimeMs = request.ResponseTimeMs,
             IsCorrect = isCorrect,
@@ -129,32 +143,31 @@ public class GameController : ControllerBase
         });
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-    private static int CalculatePoints(int responseTimeMs)
-    {
-        // Exponential decay — fast answers rewarded heavily,
-        // curve flattens out for slower answers
-        // k = 0.05 gives a nice curve:
-        // 1s  = ~9,512 pts
-        // 3s  = ~8,607 pts  
-        // 5s  = ~7,788 pts
-        // 10s = ~6,065 pts
-        // 20s = ~3,679 pts
-        // 30s = ~2,231 pts
-        var seconds = responseTimeMs / 1000.0;
-        var points = (int)(BasePoints * Math.Exp(-0.05 * seconds));
-        return Math.Max(points, MinPoints);
-    }
+    // ── POST api/game/session/start ───────────────────────────────────────────
 
     [HttpPost("session/start")]
-    public async Task<IActionResult> StartSession(CancellationToken cancellationToken)
+    public async Task<IActionResult> StartSession(
+        [FromBody] StartSessionRequest request,
+        CancellationToken cancellationToken)
     {
-        var session = await _gameSessionRepository.CreateAsync(Guid.Empty, cancellationToken);
-        return Ok(new { sessionId = session.Id });
+        // Use the player ID from the request, fall back to guest if not provided
+        var playerId = Guid.TryParse(request.PlayerId, out var pid) ? pid : Guid.Empty;
+
+        var session = await _gameSessionRepository.CreateAsync(playerId, cancellationToken);
+
+        return Ok(new StartSessionResponse
+        {
+            SessionId = session.Id,
+            PlayerId = playerId
+        });
     }
 
+    // ── POST api/game/session/end ─────────────────────────────────────────────
+
     [HttpPost("session/end")]
-    public async Task<IActionResult> EndSession([FromBody] EndSessionRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> EndSession(
+        [FromBody] EndSessionRequest request,
+        CancellationToken cancellationToken)
     {
         await _gameSessionRepository.CompleteAsync(request.SessionId, cancellationToken);
 
@@ -172,5 +185,14 @@ public class GameController : ControllerBase
             Rank = rank,
             TotalPlayers = totalSessions.Count
         });
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private static int CalculatePoints(int responseTimeMs)
+    {
+        var seconds = responseTimeMs / 1000.0;
+        var points = (int)(BasePoints * Math.Exp(-0.05 * seconds));
+        return Math.Max(points, MinPoints);
     }
 }

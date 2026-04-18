@@ -1,0 +1,77 @@
+<div class="auth-overlay" (click)="onOverlayClick($event)">
+  <div class="auth-modal" role="dialog" aria-modal="true">
+
+    <!-- Header -->
+    <div class="auth-header">
+      <span class="auth-logo">🎵</span>
+      <h2>{{ mode === 'login' ? 'Welcome Back!' : 'Join the Quiz' }}</h2>
+      <button class="auth-close" (click)="close.emit()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs">
+      <button
+        [class.active]="mode === 'login'"
+        (click)="mode = 'login'; clearError()">
+        Log In
+      </button>
+      <button
+        [class.active]="mode === 'register'"
+        (click)="mode = 'register'; clearError()">
+        Sign Up
+      </button>
+    </div>
+
+    <!-- Error banner -->
+    @if (auth.error()) {
+      <div class="auth-error" role="alert">{{ auth.error() }}</div>
+    }
+
+    <!-- Login form -->
+    @if (mode === 'login') {
+      <div class="auth-form">
+        <label>Email
+          <input type="email" [(ngModel)]="email" placeholder="you@example.com"
+                 (keyup.enter)="submit()" autocomplete="email" />
+        </label>
+        <label>Password
+          <input type="password" [(ngModel)]="password" placeholder="••••••••"
+                 (keyup.enter)="submit()" autocomplete="current-password" />
+        </label>
+        <button class="auth-submit" (click)="submit()" [disabled]="auth.loading()">
+          {{ auth.loading() ? 'Logging in…' : 'Log In' }}
+        </button>
+      </div>
+    }
+
+    <!-- Register form -->
+    @if (mode === 'register') {
+      <div class="auth-form">
+        <label>Username
+          <input type="text" [(ngModel)]="username" placeholder="SwiftFan123"
+                 (keyup.enter)="submit()" autocomplete="username"
+                 maxlength="30" />
+        </label>
+        <label>Email
+          <input type="email" [(ngModel)]="email" placeholder="you@example.com"
+                 (keyup.enter)="submit()" autocomplete="email" />
+        </label>
+        <label>Password
+          <input type="password" [(ngModel)]="password" placeholder="At least 6 characters"
+                 (keyup.enter)="submit()" autocomplete="new-password" />
+        </label>
+        <button class="auth-submit" (click)="submit()" [disabled]="auth.loading()">
+          {{ auth.loading() ? 'Creating account…' : 'Create Account' }}
+        </button>
+      </div>
+    }
+
+    <p class="auth-footer">
+      {{ mode === 'login' ? "Don't have an account?" : 'Already have an account?' }}
+      <button class="auth-link" (click)="mode = mode === 'login' ? 'register' : 'login'; clearError()">
+        {{ mode === 'login' ? 'Sign up' : 'Log in' }}
+      </button>
+    </p>
+
+  </div>
+</div>

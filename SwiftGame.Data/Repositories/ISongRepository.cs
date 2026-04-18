@@ -12,5 +12,5 @@ public interface ISongRepository
 
     Task UpsertManyAsync(IEnumerable<Song> songs, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<Song>> GetRandomSongsAsync(int count, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Song>> GetRandomSongsAsync(int count, List<Guid>? excludeIds = null, CancellationToken cancellationToken = default);
 }

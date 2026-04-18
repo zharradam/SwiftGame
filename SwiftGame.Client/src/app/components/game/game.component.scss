@@ -1,6 +1,7 @@
 // ── Container ─────────────────────────────────────────────────────────────────
 
 .game-container {
+  position: relative;
   width: 100%;
   max-width: 580px;
   display: flex;
@@ -419,44 +420,65 @@
 
 // ── Countdown ─────────────────────────────────────────────────────────────────
 
-.countdown-overlay {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.countdown-circle {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(255, 105, 180, 0.1);
-  border: 2px solid rgba(255, 105, 180, 0.4);
+.countdown-fullscreen {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: countdownPulse 1s ease-in-out infinite;
-  box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+  border-radius: inherit;
+
+  .countdown-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(10, 5, 20, 0.92);        // 👈 much darker
+    border: 1px solid rgba(232, 121, 249, 0.5); // 👈 stronger pink border
+    border-radius: 1.5rem;
+    padding: 2rem 3.5rem;
+    box-shadow: 0 8px 40px rgba(168, 85, 247, 0.4),  // 👈 stronger glow
+                0 0 0 1px rgba(232, 121, 249, 0.1);
+  }
+
+  .countdown-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .countdown-number {
+    font-size: 5rem;
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(135deg, #a855f7, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
 }
 
-.countdown-number {
-  font-size: 2rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #ff69b4, #ffd700);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+@keyframes popIn {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-.countdown-text {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 0.78rem;
-  letter-spacing: 0.05em;
-}
-
-@keyframes countdownPulse {
-  0%, 100% { transform: scale(1);    box-shadow: 0 0 20px rgba(255, 105, 180, 0.3); }
-  50%       { transform: scale(1.08); box-shadow: 0 0 30px rgba(255, 105, 180, 0.5); }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 // ── Game over ─────────────────────────────────────────────────────────────────
@@ -642,4 +664,27 @@
     letter-spacing: 0.05em;
     margin-top: 0.15rem;
   }
+}
+
+.guest-prompt {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+
+  p { margin: 0.25rem 0; }
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #c084fc;
+  font-size: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover { color: #e879f9; }
 }

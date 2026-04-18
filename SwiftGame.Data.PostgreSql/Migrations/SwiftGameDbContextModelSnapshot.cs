@@ -65,6 +65,15 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RefreshTokenExpiry")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -176,7 +185,7 @@ namespace SwiftGame.Data.PostgreSql.Migrations
             modelBuilder.Entity("GameSession", b =>
                 {
                     b.HasOne("SwiftGame.Data.Entities.Player", "Player")
-                        .WithMany()
+                        .WithMany("GameSessions")
                         .HasForeignKey("PlayerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -218,6 +227,8 @@ namespace SwiftGame.Data.PostgreSql.Migrations
 
             modelBuilder.Entity("SwiftGame.Data.Entities.Player", b =>
                 {
+                    b.Navigation("GameSessions");
+
                     b.Navigation("Scores");
                 });
 
