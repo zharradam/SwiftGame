@@ -2,46 +2,76 @@
   <div class="admin-panel" (click)="$event.stopPropagation()">
 
     <div class="admin-header">
-      <h2>Player Management</h2>
+      <h2>Admin Panel</h2>
       <button class="admin-close" (click)="close.emit()">✕</button>
     </div>
 
-    @if (loading) {
-      <div class="admin-loading">Loading players...</div>
-    }
+    <!-- Tabs -->
+    <div class="admin-tabs">
+      <button class="admin-tab" [class.active]="activeTab === 'players'" (click)="setTab('players')">
+        Players
+      </button>
+      <button class="admin-tab" [class.active]="activeTab === 'albums'" (click)="setTab('albums')">
+        Albums <span class="admin-tab__count">{{ includedCount }}/{{ albums.length }}</span>
+      </button>
+    </div>
 
     @if (error) {
       <div class="admin-error">{{ error }}</div>
     }
 
-    @if (!loading) {
-      <div class="admin-list">
-        @for (player of players; track player.id) {
-          <div class="admin-player" [class.banned]="player.isBanned">
-            <div class="admin-player__info">
-              <span class="admin-player__name">{{ player.username }}</span>
-              <span class="admin-player__email">{{ player.email }}</span>
-              <div class="admin-player__badges">
-                @if (player.isAdmin)     { <span class="badge badge--admin">Admin</span> }
-                @if (player.isModerator) { <span class="badge badge--mod">Mod</span> }
-                @if (player.isBanned)    { <span class="badge badge--banned">Banned</span> }
+    <!-- Players tab -->
+    @if (activeTab === 'players') {
+      @if (loading) {
+        <div class="admin-loading">Loading players...</div>
+      } @else {
+        <div class="admin-list">
+          @for (player of players; track player.id) {
+            <div class="admin-player" [class.banned]="player.isBanned">
+              <div class="admin-player__info">
+                <span class="admin-player__name">{{ player.username }}</span>
+                <span class="admin-player__email">{{ player.email }}</span>
+                <div class="admin-player__badges">
+                  @if (player.isAdmin)     { <span class="badge badge--admin">Admin</span> }
+                  @if (player.isModerator) { <span class="badge badge--mod">Mod</span> }
+                  @if (player.isBanned)    { <span class="badge badge--banned">Banned</span> }
+                </div>
+              </div>
+              <div class="admin-player__actions">
+                @if (!player.isAdmin) {
+                  <button class="admin-btn" [class.active]="player.isModerator" (click)="toggleModerator(player)">
+                    {{ player.isModerator ? 'Remove Mod' : 'Make Mod' }}
+                  </button>
+                  @if (!player.isBanned) {
+                    <button class="admin-btn admin-btn--danger" (click)="ban(player)">Ban</button>
+                  } @else {
+                    <button class="admin-btn admin-btn--success" (click)="unban(player)">Unban</button>
+                  }
+                }
               </div>
             </div>
-            <div class="admin-player__actions">
-              @if (!player.isAdmin) {
-                <button
-                  class="admin-btn"
-                  [class.active]="player.isModerator"
-                  (click)="toggleModerator(player)">
-                  {{ player.isModerator ? 'Remove Mod' : 'Make Mod' }}
-                </button>
-                @if (!player.isBanned) {
-                  <button class="admin-btn admin-btn--danger" (click)="ban(player)">Ban</button>
-                } @else {
-                  <button class="admin-btn admin-btn--success" (click)="unban(player)">Unban</button>
-                }
-              }
-            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- Albums tab -->
+    @if (activeTab === 'albums') {
+      <div class="admin-albums-toolbar">
+        <span class="admin-albums-hint">{{ includedCount }} of {{ albums.length }} albums included in game</span>
+        <button class="admin-btn" (click)="seedAlbums()">Reseed from Songs</button>
+      </div>
+      <div class="admin-list">
+        @for (album of albums; track album.id) {
+          <div class="admin-album" [class.excluded]="!album.isIncluded">
+            <span class="admin-album__name">{{ album.name }}</span>
+            <button
+              class="admin-btn"
+              [class.admin-btn--danger]="album.isIncluded"
+              [class.admin-btn--success]="!album.isIncluded"
+              (click)="toggleAlbum(album)">
+              {{ album.isIncluded ? 'Exclude' : 'Include' }}
+            </button>
           </div>
         }
       </div>

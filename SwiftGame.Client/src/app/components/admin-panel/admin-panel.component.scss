@@ -149,3 +149,76 @@
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+.admin-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(232, 121, 249, 0.15);
+  flex-shrink: 0;
+}
+
+.admin-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  &.active {
+    color: #f0abfc;
+    border-bottom-color: #e879f9;
+  }
+
+  &__count {
+    font-size: 0.7rem;
+    background: rgba(232, 121, 249, 0.15);
+    color: #c084fc;
+    padding: 0.1rem 0.4rem;
+    border-radius: 50px;
+  }
+}
+
+// ── Albums ────────────────────────────────────────────────────────────────────
+.admin-albums-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.admin-albums-hint {
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.admin-album {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+
+  &.excluded {
+    opacity: 0.5;
+  }
+
+  &__name {
+    font-size: 0.85rem;
+    color: #f1f5f9;
+    font-weight: 500;
+  }
+}

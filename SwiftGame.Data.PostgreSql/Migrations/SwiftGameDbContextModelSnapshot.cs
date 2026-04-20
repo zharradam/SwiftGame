@@ -52,6 +52,30 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                     b.ToTable("GameSessions");
                 });
 
+            modelBuilder.Entity("SwiftGame.Data.Entities.Album", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsIncluded")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Albums");
+                });
+
             modelBuilder.Entity("SwiftGame.Data.Entities.Player", b =>
                 {
                     b.Property<Guid>("Id")
@@ -153,6 +177,9 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid?>("AlbumId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ArtistName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -184,6 +211,8 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AlbumId");
 
                     b.HasIndex("ProviderId", "Provider")
                         .IsUnique();
@@ -229,9 +258,24 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                     b.Navigation("Song");
                 });
 
+            modelBuilder.Entity("SwiftGame.Data.Entities.Song", b =>
+                {
+                    b.HasOne("SwiftGame.Data.Entities.Album", "AlbumRef")
+                        .WithMany("Songs")
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AlbumRef");
+                });
+
             modelBuilder.Entity("GameSession", b =>
                 {
                     b.Navigation("Scores");
+                });
+
+            modelBuilder.Entity("SwiftGame.Data.Entities.Album", b =>
+                {
+                    b.Navigation("Songs");
                 });
 
             modelBuilder.Entity("SwiftGame.Data.Entities.Player", b =>

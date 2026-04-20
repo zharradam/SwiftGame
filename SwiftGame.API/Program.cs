@@ -140,6 +140,13 @@ builder.Services.AddScoped<IPlayerRepository>(sp =>
         ? new SwiftGame.Data.PostgreSql.Repositories.PlayerRepository(db)
         : new SwiftGame.Data.SqlServer.Repositories.PlayerRepository(db);
 });
+builder.Services.AddScoped<IAlbumRepository>(sp =>
+{
+    var db = sp.GetRequiredService<SwiftGameDbContext>();
+    return dbProviderName == "PostgreSql"
+        ? new SwiftGame.Data.PostgreSql.Repositories.AlbumRepository(db)
+        : new SwiftGame.Data.SqlServer.Repositories.AlbumRepository(db);
+});
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -180,6 +187,13 @@ using (var scope = app.Services.CreateScope())
             CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
+    }
+
+    // Seed albums from songs — only runs if Albums table is empty
+    if (!await db.Albums.AnyAsync())
+    {
+        var albumRepo = scope.ServiceProvider.GetRequiredService<IAlbumRepository>();
+        await albumRepo.SeedFromSongsAsync();
     }
 }
 

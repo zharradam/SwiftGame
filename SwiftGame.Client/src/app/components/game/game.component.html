@@ -118,17 +118,20 @@
 
       <div class="stage-image" *ngIf="currentImageUrl">
         <img [src]="currentImageUrl"
-             alt="Taylor Swift on stage"
-             class="stage-img"
-             (error)="currentImageUrl = ''"/>
+          alt="Taylor Swift on stage"
+          class="stage-img"
+          [class.image-blurred]="state === 'answered'"
+          (error)="currentImageUrl = ''"/>
 
           <div class="countdown-fullscreen" *ngIf="isCountingDown">
             <div class="countdown-content">
               <p class="countdown-label">Next question in</p>
               <ng-container *ngIf="isCountingDown">
-                <div class="countdown-number" *ngIf="countdown > 0">
-                  {{ countdown }}
-                </div>
+                <ng-container *ngFor="let _ of [countdownKey]">
+                  <div class="countdown-number" *ngIf="countdown > 0">
+                    {{ countdown }}
+                  </div>
+                </ng-container>
               </ng-container>
             </div>
           </div>
@@ -146,18 +149,14 @@
 
       <div class="audio-row">
         <div class="audio-indicator" *ngIf="state === 'playing'; else audioStopped">
-          <div class="audio-bar"></div>
-          <div class="audio-bar"></div>
-          <div class="audio-bar"></div>
-          <div class="audio-bar"></div>
-          <div class="audio-bar"></div>
+          <div class="audio-bar" *ngFor="let bar of audioBars"></div>
         </div>
         <ng-template #audioStopped>
           <div class="audio-placeholder"></div>
         </ng-template>
 
-        <div class="timer" [class.stopped]="state === 'answered'">
-          <span class="timer-value">{{ formatTime(elapsedMs) }}</span>
+        <div class="timer" [class.stopped]="state === 'answered'" [class.danger]="remainingMs <= 3000 && state === 'playing'">
+          <span class="timer-value">{{ formatTime(remainingMs) }}</span>
         </div>
       </div>
 

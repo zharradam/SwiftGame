@@ -14,6 +14,7 @@ public class SwiftGameDbContext : DbContext
     public DbSet<Score> Scores { get; set; }
     public DbSet<Song> Songs { get; set; }
     public DbSet<GameSession> GameSessions { get; set; }
+    public DbSet<Album> Albums { get; set; }   // 👈 new
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,7 +26,7 @@ public class SwiftGameDbContext : DbContext
             entity.HasKey(p => p.Id);
 
             entity.Property(p => p.Id)
-      .ValueGeneratedNever();
+                  .ValueGeneratedNever();
 
             entity.Property(p => p.Username)
                   .IsRequired()
@@ -40,6 +41,23 @@ public class SwiftGameDbContext : DbContext
 
             entity.HasIndex(p => p.Username)
                   .IsUnique();
+        });
+
+        // ── Album ─────────────────────────────────────────────────────────────
+        modelBuilder.Entity<Album>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+
+            entity.Property(a => a.Name)
+                  .IsRequired()
+                  .HasMaxLength(200);
+
+            entity.HasIndex(a => a.Name)
+                  .IsUnique();
+
+            entity.Property(a => a.IsIncluded)
+                  .IsRequired()
+                  .HasDefaultValue(true);
         });
 
         // ── Song ──────────────────────────────────────────────────────────────
@@ -76,9 +94,16 @@ public class SwiftGameDbContext : DbContext
             // Prevent duplicate songs from the same provider
             entity.HasIndex(s => new { s.ProviderId, s.Provider })
                   .IsUnique();
+
+            // FK to Album — nullable so existing songs aren't broken
+            entity.HasOne(s => s.AlbumRef)
+                  .WithMany(a => a.Songs)
+                  .HasForeignKey(s => s.AlbumId)
+                  .OnDelete(DeleteBehavior.SetNull)
+                  .IsRequired(false);
         });
 
-        // ── GameSession ───────────────────────────────────────────────────────────────
+        // ── GameSession ───────────────────────────────────────────────────────
         modelBuilder.Entity<GameSession>(entity =>
         {
             entity.HasKey(g => g.Id);
@@ -92,7 +117,7 @@ public class SwiftGameDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // ── Update Score to include GameSession ───────────────────────────────────────
+        // ── Score ─────────────────────────────────────────────────────────────
         modelBuilder.Entity<Score>(entity =>
         {
             entity.HasKey(s => s.Id);

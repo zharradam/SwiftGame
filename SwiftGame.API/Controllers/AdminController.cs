@@ -12,6 +12,7 @@ namespace SwiftGame.API.Controllers;
 [Authorize]
 public class AdminController(
     IPlayerRepository players,
+    IAlbumRepository albums,
     IChatService chatService,
     IHubContext<ChatHub> chatHub) : ControllerBase
 {
@@ -56,10 +57,8 @@ public class AdminController(
         player.IsBanned = true;
         await players.UpdateAsync(player);
 
-        // Remove all their messages from chat
         chatService.DeleteMessagesByUser(player.Username);
 
-        // Broadcast to all clients
         await chatHub.Clients.All.SendAsync("PlayerBanned", player.Username);
         await chatHub.Clients.All.SendAsync("ChatHistory", chatService.GetRecentMessages());
 
@@ -112,5 +111,43 @@ public class AdminController(
         await chatHub.Clients.All.SendAsync("MessageDeleted", messageId);
 
         return NoContent();
+    }
+
+    // ── GET /api/admin/albums ─────────────────────────────────────────────────
+
+    [HttpGet("albums")]
+    public async Task<IActionResult> GetAlbums(CancellationToken cancellationToken)
+    {
+        if (!IsAdmin) return Forbid();
+
+        var albumList = await albums.GetAllAsync(cancellationToken);
+        return Ok(albumList.Select(a => new { a.Id, a.Name, a.IsIncluded }));
+    }
+
+    // ── POST /api/admin/albums/{id}/toggle ────────────────────────────────────
+
+    [HttpPost("albums/{id}/toggle")]
+    public async Task<IActionResult> ToggleAlbum(Guid id, CancellationToken cancellationToken)
+    {
+        if (!IsAdmin) return Forbid();
+
+        var album = await albums.GetByIdAsync(id, cancellationToken);
+        if (album is null) return NotFound();
+
+        album.IsIncluded = !album.IsIncluded;
+        await albums.UpdateAsync(album, cancellationToken);
+
+        return Ok(new { album.Id, album.Name, album.IsIncluded });
+    }
+
+    // ── POST /api/admin/albums/seed ───────────────────────────────────────────
+
+    [HttpPost("albums/seed")]
+    public async Task<IActionResult> SeedAlbums(CancellationToken cancellationToken)
+    {
+        if (!IsAdmin) return Forbid();
+
+        await albums.SeedFromSongsAsync(cancellationToken);
+        return Ok(new { message = "Albums seeded from songs successfully." });
     }
 }

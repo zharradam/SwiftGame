@@ -232,6 +232,12 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  filter: blur(0) brightness(1);
+  transition: filter 0.65s ease;
+
+  &.image-blurred {
+    filter: blur(12px) brightness(0.6);
+  }
 }
 
 // ── Audio row ─────────────────────────────────────────────────────────────────
@@ -253,13 +259,18 @@
 .audio-bar {
   width: 3px;
   border-radius: 2px;
-  animation: audioBar 0.8s ease-in-out infinite;
+  animation: audioBar 0.7s ease-in-out infinite;
 
-  &:nth-child(1) { height: 12px; background: #ff69b4; animation-delay: 0.0s; }
-  &:nth-child(2) { height: 22px; background: #c850c0; animation-delay: 0.1s; }
-  &:nth-child(3) { height: 30px; background: #8a2be2; animation-delay: 0.2s; }
-  &:nth-child(4) { height: 22px; background: #c850c0; animation-delay: 0.3s; }
-  &:nth-child(5) { height: 12px; background: #ff69b4; animation-delay: 0.4s; }
+  @for $i from 1 through 20 {
+    &:nth-child(#{$i}) {
+      $mid:    if($i <= 10, $i, 21 - $i);
+      $height: 8 + $mid * 3;
+      $hue:    265 + $i * 10;
+      height:           #{$height}px;
+      background:       hsl($hue, 72%, 65%);
+      animation-delay:  #{($i - 1) * 0.04}s;
+    }
+  }
 }
 
 .audio-placeholder {
@@ -294,6 +305,23 @@
     background: none;
     -webkit-text-fill-color: rgba(255, 255, 255, 0.3);
   }
+
+  &.danger {
+    border-color: rgba(255, 99, 99, 0.6);
+    animation: timerUrgent 0.5s ease-in-out infinite;
+
+    .timer-value {
+      background: linear-gradient(90deg, #ff6363, #ff9900);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+}
+
+@keyframes timerUrgent {
+  0%, 100% { box-shadow: 0 0 0px rgba(255, 99, 99, 0);   }
+  50%       { box-shadow: 0 0 16px rgba(255, 99, 99, 0.6); }
 }
 
 // ── Choices ───────────────────────────────────────────────────────────────────
@@ -433,17 +461,33 @@
   border-radius: inherit;
 
   .countdown-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(10, 5, 20, 0.92);        // 👈 much darker
-    border: 1px solid rgba(232, 121, 249, 0.5); // 👈 stronger pink border
-    border-radius: 1.5rem;
-    padding: 2rem 3.5rem;
-    box-shadow: 0 8px 40px rgba(168, 85, 247, 0.4),  // 👈 stronger glow
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(10, 5, 20, 0.92);
+  border: 1px solid rgba(232, 121, 249, 0.5);
+  border-radius: 1.5rem;
+  padding: 2rem 3.5rem;
+  box-shadow: 0 8px 40px rgba(168, 85, 247, 0.4),
+              0 0 0 1px rgba(232, 121, 249, 0.1);
+  animation: borderPulse 1s ease-in-out infinite;  // 👈 add this
+}
+
+// 👇 add this new keyframe
+@keyframes borderPulse {
+  0%, 100% {
+    border-color: rgba(232, 121, 249, 0.4);
+    box-shadow: 0 8px 40px rgba(168, 85, 247, 0.3),
                 0 0 0 1px rgba(232, 121, 249, 0.1);
   }
+  50% {
+    border-color: rgba(232, 121, 249, 1);
+    box-shadow: 0 8px 60px rgba(168, 85, 247, 0.8),
+                0 0 0 4px rgba(232, 121, 249, 0.25),
+                0 0 80px rgba(232, 121, 249, 0.3);
+  }
+}
 
   .countdown-label {
     font-size: 0.75rem;
@@ -466,14 +510,10 @@
 }
 
 @keyframes popIn {
-  from {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.2); opacity: 1; }
+  80%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
 }
 
 @keyframes fadeIn {

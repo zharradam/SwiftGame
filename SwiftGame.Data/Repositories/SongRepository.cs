@@ -49,11 +49,20 @@ public class SongRepository : ISongRepository
             await UpsertAsync(song, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Song>> GetRandomSongsAsync(int count, List<Guid>? excludeIds = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Song>> GetRandomSongsAsync(
+        int count,
+        List<Guid>? excludeIds = null,
+        CancellationToken cancellationToken = default)
     {
-        var allIds = await _context.Songs
+        // Only pick from songs belonging to included albums
+        // Songs with no AlbumId (not yet linked) are included as a fallback
+        var query = _context.Songs
             .Where(s => s.PreviewUrl != null)
             .Where(s => excludeIds == null || !excludeIds.Contains(s.Id))
+            .Where(s => s.AlbumId == null ||                          // unlinked songs — include as fallback
+                        s.AlbumRef!.IsIncluded);                      // or album is included
+
+        var allIds = await query
             .Select(s => new { s.Id, s.Title })
             .ToListAsync(cancellationToken);
 

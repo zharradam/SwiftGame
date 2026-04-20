@@ -13,6 +13,7 @@ export interface RoundResponse {
 }
 
 export interface LeaderboardEntry {
+  id:            string;
   playerName:    string;
   songTitle:     string;
   pointsEarned:  number;

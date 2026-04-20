@@ -1,8 +1,12 @@
+// ── Container ─────────────────────────────────────────────────────────────────
+
 .leaderboard-container {
   width: 100%;
   background: transparent;
   padding: 0;
 }
+
+// ── Header ────────────────────────────────────────────────────────────────────
 
 .leaderboard-header {
   display: flex;
@@ -25,21 +29,7 @@
   background-clip: text;
 }
 
-.btn-refresh {
-  background: rgba(255, 105, 180, 0.1);
-  border: 1px solid rgba(255, 105, 180, 0.3);
-  border-radius: 50px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.75rem;
-  padding: 0.3rem 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: rgba(255, 105, 180, 0.2);
-    color: #fff;
-  }
-}
+// ── Loading / Error / Empty ───────────────────────────────────────────────────
 
 .state-loading {
   display: flex;
@@ -68,11 +58,15 @@
   to { transform: rotate(360deg); }
 }
 
+// ── List ──────────────────────────────────────────────────────────────────────
+
 .leaderboard-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
+
+// ── Entry ─────────────────────────────────────────────────────────────────────
 
 .leaderboard-entry {
   display: flex;
@@ -82,40 +76,120 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s;
+  position: relative;
+  transition: opacity 0.5s ease;
 
   &:hover {
     background: rgba(255, 105, 180, 0.08);
     border-color: rgba(255, 105, 180, 0.2);
   }
 
-    &:first-child {
-    background: rgba(209, 181, 24, 0.568);
-    border-color: rgba(255, 215, 0, 0.5);
+  // ── Top 3 styling ──────────────────────────────────────────────
+  &:first-child {
+    background: rgba(209, 181, 24, 0.12);
+    border-color: rgba(255, 215, 0, 0.45);
     border-left: 3px solid #ffd700;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 24px rgba(255, 215, 0, 0.12);
+
+    .entry-points {
+      background: linear-gradient(90deg, #ffd700, #ffec6e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
   }
 
   &:nth-child(2) {
-    background: rgba(192, 192, 192, 0.582);
-    border-color: rgba(192, 192, 192, 0.4);
+    background: rgba(192, 192, 192, 0.08);
+    border-color: rgba(192, 192, 192, 0.35);
     border-left: 3px solid #c0c0c0;
-    box-shadow: 0 0 20px rgba(192, 192, 192, 0.1);
+    box-shadow: 0 0 24px rgba(192, 192, 192, 0.08);
+
+    .entry-points {
+      background: linear-gradient(90deg, #c0c0c0, #e8e8e8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
   }
 
   &:nth-child(3) {
-    background: rgba(155, 81, 7, 0.856);
-    border-color: rgba(205, 127, 50, 0.4);
-    border-left: 3px solid #dd8935;
-    box-shadow: 0 0 20px rgba(205, 127, 50, 0.1);
+    background: rgba(205, 127, 50, 0.10);
+    border-color: rgba(205, 127, 50, 0.35);
+    border-left: 3px solid #cd7f32;
+    box-shadow: 0 0 24px rgba(205, 127, 50, 0.10);
+
+    .entry-points {
+      background: linear-gradient(90deg, #cd7f32, #e8a96e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+
+  // ── SignalR animation states ────────────────────────────────────
+
+  &.flash {
+    animation: rowFlash 4s ease forwards;
+
+    .entry-rank {
+      display: inline-block;
+      animation: rankNumberPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+  }
+
+  &.entry-new {
+    animation: slideInRight 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
+              rowRankUp 6s ease forwards;
+
+    .entry-rank {
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 900;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.9),
+                  0 0 28px rgba(72, 199, 116, 0.9);
+      display: inline-block;
+      animation: rankNumberPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+  }
+
+  &.rank-up {
+    animation: rowRankUp 6s ease forwards;
+    z-index: 1;
+
+    .entry-rank {
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 900;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.9),
+                   0 0 28px rgba(72, 199, 116, 0.9);
+      display: inline-block;
+      animation: rankNumberPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .entry-player {
+      color: #fff;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+    }
+  }
+
+  &.rank-down {
+    animation: rowRankDown 4s ease forwards;
+
+    .entry-rank {
+      display: inline-block;
+      animation: rankNumberPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
   }
 }
+
+// ── Entry parts ───────────────────────────────────────────────────────────────
 
 .entry-rank {
   font-size: 1rem;
   min-width: 1.5rem;
   text-align: center;
-  color: rgb(255, 255, 255);
+  color: #fff;
   font-weight: 900;
 }
 
@@ -160,4 +234,88 @@
     font-size: 0.68rem;
     margin-top: 0.1rem;
   }
+}
+
+// ── Rank change badge ─────────────────────────────────────────────────────────
+
+.rank-change {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  animation: badgeFadeOut 6s ease forwards;
+
+  &.up {
+    color: #48c774;
+    background: rgba(72, 199, 116, 0.15);
+    border: 1px solid rgba(72, 199, 116, 0.3);
+  }
+
+  &.down {
+    color: #ff6363;
+    background: rgba(255, 99, 99, 0.12);
+    border: 1px solid rgba(255, 99, 99, 0.25);
+  }
+}
+
+// ── Sibling dimming ───────────────────────────────────────────────────────────
+
+.leaderboard-list:has(.rank-up) .leaderboard-entry:not(.rank-up),
+.leaderboard-list:has(.entry-new) .leaderboard-entry:not(.entry-new),
+.leaderboard-list:has(.flash) .leaderboard-entry:not(.flash) {
+  opacity: 0.28;
+  transition: opacity 0.4s ease;
+}
+
+.leaderboard-list:not(:has(.rank-up)):not(:has(.entry-new)):not(:has(.flash)) .leaderboard-entry {
+  opacity: 1;
+  transition: opacity 0.8s ease;
+}
+
+// ── Keyframes ─────────────────────────────────────────────────────────────────
+
+@keyframes rowFlash {
+  0%   { box-shadow: none; }
+  15%  { box-shadow: 0 0 0 1px rgba(255, 105, 180, 0.8),
+                     0 0 20px rgba(255, 105, 180, 0.4); }
+  100% { box-shadow: none; }
+}
+
+@keyframes rowRankUp {
+  0%   { background: transparent; box-shadow: none; }
+  10%  { background: rgba(72, 199, 116, 0.30);
+         box-shadow: 0 0 0 1px rgba(72, 199, 116, 0.8),
+                     0 0 30px rgba(72, 199, 116, 0.4); }
+  80%  { background: rgba(72, 199, 116, 0.15);
+         box-shadow: 0 0 0 1px rgba(72, 199, 116, 0.4),
+                     0 0 16px rgba(72, 199, 116, 0.2); }
+  100% { background: transparent; box-shadow: none; }
+}
+
+@keyframes rowRankDown {
+  0%   { background: transparent; }
+  15%  { background: rgba(255, 99, 99, 0.06); }
+  100% { background: transparent; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes rankNumberPop {
+  0%   { transform: scale(1); }
+  15%  { transform: scale(1.4); }
+  30%  { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes badgeFadeOut {
+  0%   { opacity: 0; transform: scale(0.7); }
+  12%  { opacity: 1; transform: scale(1); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
 }

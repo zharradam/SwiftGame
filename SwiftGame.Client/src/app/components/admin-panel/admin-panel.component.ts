@@ -14,6 +14,14 @@ export interface PlayerRecord {
   createdAt:   string;
 }
 
+export interface AlbumRecord {
+  id:         string;
+  name:       string;
+  isIncluded: boolean;
+}
+
+type AdminTab = 'players' | 'albums';
+
 @Component({
   selector: 'swiftgame-admin-panel',
   standalone: true,
@@ -24,15 +32,27 @@ export interface PlayerRecord {
 export class AdminPanelComponent implements OnInit {
   @Output() close = new EventEmitter<void>();
 
-  players: PlayerRecord[] = [];
-  loading: boolean        = true;
-  error:   string         = '';
+  activeTab: AdminTab = 'players';
+
+  players:  PlayerRecord[] = [];
+  albums:   AlbumRecord[]  = [];
+  loading:  boolean        = true;
+  error:    string         = '';
 
   private readonly apiUrl = `${environment.apiUrl}/admin`;
 
   constructor(private http: HttpClient, readonly auth: AuthService) {}
 
-  ngOnInit(): void { this.loadPlayers(); }
+  ngOnInit(): void {
+    this.loadPlayers();
+    this.loadAlbums();
+  }
+
+  setTab(tab: AdminTab): void {
+    this.activeTab = tab;
+  }
+
+  // ── Players ───────────────────────────────────────────────────────────────
 
   loadPlayers(): void {
     this.loading = true;
@@ -61,5 +81,32 @@ export class AdminPanelComponent implements OnInit {
       next:  () => this.loadPlayers(),
       error: () => this.error = 'Failed to update moderator status.'
     });
+  }
+
+  // ── Albums ────────────────────────────────────────────────────────────────
+
+  loadAlbums(): void {
+    this.http.get<AlbumRecord[]>(`${this.apiUrl}/albums`).subscribe({
+      next:  albums => this.albums = albums,
+      error: ()     => this.error = 'Failed to load albums.'
+    });
+  }
+
+  toggleAlbum(album: AlbumRecord): void {
+    this.http.post(`${this.apiUrl}/albums/${album.id}/toggle`, {}).subscribe({
+      next:  () => album.isIncluded = !album.isIncluded,
+      error: () => this.error = 'Failed to toggle album.'
+    });
+  }
+
+  seedAlbums(): void {
+    this.http.post(`${this.apiUrl}/albums/seed`, {}).subscribe({
+      next:  () => this.loadAlbums(),
+      error: () => this.error = 'Failed to seed albums.'
+    });
+  }
+
+  get includedCount(): number {
+    return this.albums.filter(a => a.isIncluded).length;
   }
 }

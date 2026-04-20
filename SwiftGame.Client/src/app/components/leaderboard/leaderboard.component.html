@@ -4,34 +4,42 @@
     <h2 class="leaderboard-title">Leaderboard</h2>
   </div>
 
-  <!-- Loading -->
   <div class="state-loading" *ngIf="state === 'loading'">
     <div class="spinner"></div>
   </div>
 
-  <!-- Error -->
   <div class="state-error" *ngIf="state === 'error'">
     <p>Failed to load leaderboard.</p>
     <button (click)="loadLeaderboard()">Try Again</button>
   </div>
 
-  <!-- Empty -->
   <div class="state-empty" *ngIf="state === 'loaded' && entries.length === 0">
     <p>No scores yet — be the first to play!</p>
   </div>
 
-  <!-- Entries -->
   <div class="leaderboard-list" *ngIf="state === 'loaded' && entries.length > 0">
-    <div class="leaderboard-entry" *ngFor="let entry of entries; let i = index">
+    <div class="leaderboard-entry"
+         *ngFor="let entry of entries; let i = index; trackBy: trackByEntry"
+         [class.flash]="isFlashing(entry)"
+         [class.entry-new]="isNew(entry)"
+         [class.rank-up]="getRankChange(entry) > 0"
+         [class.rank-down]="getRankChange(entry) < 0">
+
       <span class="entry-rank">{{ getMedal(i) }}</span>
+
       <div class="entry-details">
         <span class="entry-player">{{ entry.playerName }}</span>
         <span class="entry-song">{{ entry.songTitle }}</span>
       </div>
+
       <div class="entry-score">
-        <span class="entry-points">{{ entry.pointsEarned }}</span>
+        <span class="entry-points">{{ entry.pointsEarned | number }}</span>
         <span class="entry-time">{{ formatTime(entry.responseTimeMs) }}</span>
       </div>
+
+      <span class="rank-change up"   *ngIf="getRankChange(entry) > 0">{{ getRankChangeLabel(entry) }}</span>
+      <span class="rank-change down" *ngIf="getRankChange(entry) < 0">{{ getRankChangeLabel(entry) }}</span>
+
     </div>
   </div>
 

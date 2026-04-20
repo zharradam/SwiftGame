@@ -23,6 +23,7 @@ public class LeaderboardController : ControllerBase
 
         var result = sessions.Select(s => new
         {
+            id = s.Id,
             playerName = s.Player.Username,
             songTitle = s.Scores
                               .OrderByDescending(sc => sc.PointsEarned)

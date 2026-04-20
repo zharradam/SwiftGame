@@ -34,7 +34,8 @@ export class GameComponent implements OnInit, OnDestroy {
   playerRank:        number   = 0;
   totalPlayers:      number   = 0;
   countdownKey:      number   = 0;
-  readonly gameTitle: string = 'Swiftology - the Taylor Swift Music Quiz';
+  readonly gameTitle: string = 'Mastermind: Taylor\'s Version';
+  readonly audioBars = Array.from({ length: 20 }, (_, i) => i);
 
   @Output() openLogin    = new EventEmitter<void>();
   @Output() openRegister = new EventEmitter<void>();
@@ -405,5 +406,9 @@ onSignUpClick() { this.openRegister.emit(); }
     this.imageQueue = Array.from({ length: this.imageCount }, (_, i) => i + 1)
       .sort(() => Math.random() - 0.5)
       .slice(0, this.questionsPerGame);
+  }
+
+  get remainingMs(): number {
+    return Math.max(0, 10000 - this.elapsedMs);
   }
 }
