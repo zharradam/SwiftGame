@@ -149,7 +149,11 @@
 
       <div class="audio-row">
         <div class="audio-indicator" *ngIf="state === 'playing'; else audioStopped">
-          <div class="audio-bar" *ngFor="let bar of audioBars"></div>
+          <div class="audio-bar"
+              *ngFor="let h of barHeights; let i = index"
+              [style.height.px]="h"
+              [style.background]="'hsl(' + (265 + i * 8) + ', 75%, 65%)'">
+          </div>
         </div>
         <ng-template #audioStopped>
           <div class="audio-placeholder"></div>

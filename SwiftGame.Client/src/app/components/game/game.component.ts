@@ -47,6 +47,13 @@ export class GameComponent implements OnInit, OnDestroy {
   private timerInterval:     ReturnType<typeof setInterval> | null = null;
   private startTime:         number = 0;
 
+  private audioContext:  AudioContext | null = null;
+  private analyser:      AnalyserNode | null = null;
+  private audioSource:   MediaElementAudioSourceNode | null = null;
+  private animFrameId:   number = 0;
+
+  barHeights: number[] = new Array(28).fill(0);  // drives the template
+
   elapsedMs: number = 0;
   audio:     HTMLAudioElement | null = null;
 
@@ -262,17 +269,75 @@ onSignUpClick() { this.openRegister.emit(); }
   // ── Audio ──────────────────────────────────────────────────────────────────
 
   private startAudio(url: string, startAt: number): void {
-    this.audio = new Audio(url);
+    this.audio            = new Audio(url);
+    this.audio.crossOrigin = 'anonymous';  // required for Web Audio API
     this.audio.currentTime = startAt;
+
+    // Set up AudioContext + AnalyserNode
+    this.audioContext = new AudioContext();
+    this.analyser     = this.audioContext.createAnalyser();
+    this.analyser.fftSize               = 512;  // 128 bins, more resolution
+    this.analyser.smoothingTimeConstant = 0.7;  // faster response = more movement
+    this.analyser.minDecibels           = -85;  // more sensitive to quiet signals
+    this.analyser.maxDecibels           = -10;
+
+    this.audioSource = this.audioContext.createMediaElementSource(this.audio);
+    this.audioSource.connect(this.analyser);
+    this.analyser.connect(this.audioContext.destination);
+
     this.audio.play().catch(err => console.error('Audio play failed:', err));
+    this.startVisualiser();
   }
 
   private stopAudio(): void {
+    this.stopVisualiser();
+
     if (this.audio) {
       this.audio.pause();
       this.audio.src = '';
       this.audio     = null;
     }
+
+    if (this.audioSource) {
+      this.audioSource.disconnect();
+      this.audioSource = null;
+    }
+
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+
+    this.analyser = null;
+  }
+
+  private startVisualiser(): void {
+    const dataArray = new Uint8Array(this.analyser!.frequencyBinCount); // 32 values
+
+    const tick = () => {
+      this.analyser!.getByteFrequencyData(dataArray);
+
+      this.barHeights = Array.from({ length: 28 }, (_, i) => {
+        // Only use bottom 55% of bins — above that is mostly silence in music
+        const bucket  = Math.floor((i / 28) * dataArray.length * 0.55);
+        const raw     = dataArray[bucket] / 255;
+        const boosted = Math.pow(raw, 0.45);  // more aggressive lift on loud signals but quiet passages still drop low
+
+        return 2 + boosted * 50;   // lower floor, higher ceiling
+      });
+
+      this.animFrameId = requestAnimationFrame(tick);
+    };
+
+    tick();
+  }
+
+  private stopVisualiser(): void {
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = 0;
+    }
+    this.barHeights = new Array(28).fill(0);
   }
 
   // ── Timer ──────────────────────────────────────────────────────────────────
