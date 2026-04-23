@@ -1,7 +1,17 @@
 <div class="game-container">
 
+  <!-- Full screen countdown — shown before first question -->
+  @if (state === 'countdown' && isCountingDown) {
+    <div class="countdown-fullscreen">
+      <div class="countdown-content">
+        <p class="countdown-label">First question in</p>
+        <div class="countdown-number" *ngIf="countdown > 0">{{ countdown }}</div>
+      </div>
+    </div>
+  }
+
   <!-- Start screen -->
-  <div class="start-screen" *ngIf="!gameStarted">
+  <div class="start-screen" *ngIf="!gameStarted || state === 'countdown'">
     <div class="game-header hide-mobile">
       <h1 class="game-title">{{ gameTitle }}</h1>
       <p class="game-subtitle">HOW WELL DO YOU KNOW TAYLOR SWIFT?</p>
@@ -125,7 +135,9 @@
 
           <div class="countdown-fullscreen" *ngIf="isCountingDown">
             <div class="countdown-content">
-              <p class="countdown-label">Next question in</p>
+              <p class="countdown-label">
+                {{ currentQuestion === 0 ? 'First question in' : currentQuestion === questionsPerGame - 1 ? 'Last question in' : 'Next question in' }}
+              </p>
               <ng-container *ngIf="isCountingDown">
                 <ng-container *ngFor="let _ of [countdownKey]">
                   <div class="countdown-number" *ngIf="countdown > 0">

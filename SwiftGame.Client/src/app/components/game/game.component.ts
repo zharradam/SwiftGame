@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { GameService, RoundResponse, SubmitAnswerResponse } from '../../services/game.service';
 import { AuthService } from '../../services/auth.service';
 
-type GameState = 'loading' | 'playing' | 'answered' | 'error';
+type GameState = 'loading' | 'playing' | 'answered' | 'error' | 'countdown';
 
 @Component({
   selector: 'swiftgame-game',
@@ -119,7 +119,6 @@ onSignUpClick() { this.openRegister.emit(); }
     this.state          = 'playing';
     this.pickRandomImage();
     this.startAudio(round.previewUrl, round.startAt);
-    this.startTimer();
   }
 
   selectChoice(choice: string): void {
@@ -189,11 +188,20 @@ onSignUpClick() { this.openRegister.emit(); }
       next: (response) => {
         this.sessionId = response.sessionId;
         this.buildImageQueue();
-        this.loadRound();
+        this.state = 'countdown';
+
+        this.gameService.getRound(this.usedSongIds).subscribe({
+          next: (round) => {
+            this.startCountdown(3, () => this.startPlaying(round));
+          },
+          error: () => {
+            this.gameStarted = false;
+          }
+        });
       },
       error: (err) => {
         console.error('Failed to start session:', err);
-        this.gameStarted = false;  // drop back to home screen rather than starting a broken game
+        this.gameStarted = false;
       }
     });
   }
@@ -204,20 +212,31 @@ onSignUpClick() { this.openRegister.emit(); }
       cancelAnimationFrame(this.fireworksAnimationId);
       this.fireworksAnimationId = 0;
     }
-    this.currentQuestion   = 0;
-    this.questionsAnswered = 0;
-    this.totalScore        = 0;
-    this.correctCount      = 0;
-    this.gameOver          = false;
-    this.playerRank        = 0;
-    this.totalPlayers      = 0;
-    this.stopCountdown();
+      this.currentQuestion   = 0;
+      this.questionsAnswered = 0;
+      this.totalScore        = 0;
+      this.correctCount      = 0;
+      this.gameOver          = false;
+      this.playerRank        = 0;
+      this.totalPlayers      = 0;
+      this.usedSongIds       = [];
+      this.stopCountdown();
 
     this.gameService.startSession(this.playerId).subscribe({
       next: (response) => {
         this.sessionId = response.sessionId;
         this.buildImageQueue();
-        this.loadRound();
+        this.state = 'countdown';
+
+        this.gameService.getRound(this.usedSongIds).subscribe({
+        next: (round) => {
+          this.startCountdown(3, () => this.startPlaying(round));
+        },
+        error: () => {
+          this.state = 'loading';
+          this.loadRound();
+        }
+      });
       },
       error: () => {
         this.buildImageQueue();
@@ -269,21 +288,28 @@ onSignUpClick() { this.openRegister.emit(); }
   // ── Audio ──────────────────────────────────────────────────────────────────
 
   private startAudio(url: string, startAt: number): void {
-    this.audio            = new Audio(url);
-    this.audio.crossOrigin = 'anonymous';  // required for Web Audio API
+    this.audio             = new Audio(url);
+    this.audio.crossOrigin = 'anonymous';
     this.audio.currentTime = startAt;
 
     // Set up AudioContext + AnalyserNode
     this.audioContext = new AudioContext();
     this.analyser     = this.audioContext.createAnalyser();
-    this.analyser.fftSize               = 512;  // 128 bins, more resolution
-    this.analyser.smoothingTimeConstant = 0.7;  // faster response = more movement
-    this.analyser.minDecibels           = -85;  // more sensitive to quiet signals
+    this.analyser.fftSize               = 512;
+    this.analyser.smoothingTimeConstant = 0.7;
+    this.analyser.minDecibels           = -85;
     this.analyser.maxDecibels           = -10;
 
     this.audioSource = this.audioContext.createMediaElementSource(this.audio);
     this.audioSource.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
+
+    // 👈 Start timer only when audio actually begins playing
+    this.audio.addEventListener('playing', () => {
+      if (this.state === 'playing' && !this.timerInterval) {
+        this.startTimer();
+      }
+    }, { once: true });
 
     this.audio.play().catch(err => console.error('Audio play failed:', err));
     this.startVisualiser();
