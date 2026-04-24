@@ -27,6 +27,10 @@ builder.Services.AddOpenApi();
 builder.Services.Configure<GameSettings>(
     builder.Configuration.GetSection("GameSettings"));
 
+// ── Health checks ─────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<SwiftGameDbContext>();
+
 // ── JWT Authentication ────────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secret = jwtSettings["Secret"]
@@ -168,6 +172,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<LeaderboardHub>("/hubs/leaderboard");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHealthChecks("/health");
 
 // ── Auto-apply migrations on startup ─────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
