@@ -5,7 +5,7 @@ using System.Security.Claims;
 
 namespace SwiftGame.API.Hubs;
 
-public class ChatHub(IChatService chatService) : Hub
+public class ChatHub(IChatService chatService, IAuditService audit) : Hub
 {
     // shortcut: in-process presence, fine for one server instance; move to a store if the API ever scales out
     private static readonly ConcurrentDictionary<string, string?> Online = new();
@@ -60,6 +60,7 @@ public class ChatHub(IChatService chatService) : Hub
         }
 
         var chatMessage = await chatService.AddMessageAsync(display, filtered, isGuest);
+        await audit.LogAsync("chat", null, display);
         await Clients.All.SendAsync("ReceiveMessage", chatMessage);
     }
 

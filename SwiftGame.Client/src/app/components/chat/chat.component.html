@@ -1,6 +1,6 @@
 <!-- Admin panel -->
 @if (showAdminPanel) {
-  <swiftgame-admin-panel (close)="showAdminPanel = false" />
+  @defer { <swiftgame-admin-panel (close)="showAdminPanel = false" /> }
 }
 
 <div class="chat-container">

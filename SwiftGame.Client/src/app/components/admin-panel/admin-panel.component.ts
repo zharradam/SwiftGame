@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { AdminAuditComponent } from './admin-audit.component';
+import { AdminStatsComponent } from './admin-stats.component';
 
 export interface PlayerRecord {
   id:          string;
@@ -20,12 +22,12 @@ export interface AlbumRecord {
   isIncluded: boolean;
 }
 
-type AdminTab = 'players' | 'albums';
+type AdminTab = 'players' | 'albums' | 'audit' | 'stats';
 
 @Component({
   selector: 'swiftgame-admin-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AdminAuditComponent, AdminStatsComponent],
   templateUrl: './admin-panel.component.html',
   styleUrl: './admin-panel.component.scss'
 })

@@ -2,6 +2,7 @@ import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpErrorResponse } from
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { VisitService } from '../services/visit.service';
 
 export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
@@ -12,7 +13,8 @@ export const authInterceptor: HttpInterceptorFn = (
 
   // Skip auth header for auth endpoints themselves
   const isAuthEndpoint = req.url.includes('/api/auth/');
-  const authedReq = token && !isAuthEndpoint ? addToken(req, token) : req;
+  const withVisitor = req.clone({ setHeaders: { 'X-Visitor-Id': inject(VisitService).visitorId } });
+  const authedReq = token && !isAuthEndpoint ? addToken(withVisitor, token) : withVisitor;
 
   return next(authedReq).pipe(
     catchError((err: HttpErrorResponse) => {

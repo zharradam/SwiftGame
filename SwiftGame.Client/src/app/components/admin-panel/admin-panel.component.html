@@ -1,9 +1,9 @@
 <div class="admin-overlay" (click)="close.emit()">
-  <div class="admin-panel" (click)="$event.stopPropagation()">
+  <div class="admin-panel" [class.admin-panel--wide]="activeTab === 'stats' || activeTab === 'audit'" (click)="$event.stopPropagation()">
 
     <div class="admin-header">
       <h2>Admin Panel</h2>
-      <button class="admin-close" (click)="close.emit()">✕</button>
+      <button class="admin-close" (click)="close.emit()" aria-label="Close admin panel">✕</button>
     </div>
 
     <!-- Tabs -->
@@ -14,6 +14,8 @@
       <button class="admin-tab" [class.active]="activeTab === 'albums'" (click)="setTab('albums')">
         Albums <span class="admin-tab__count">{{ includedCount }}/{{ albums.length }}</span>
       </button>
+      <button class="admin-tab" [class.active]="activeTab === 'audit'" (click)="setTab('audit')">Audit</button>
+      <button class="admin-tab" [class.active]="activeTab === 'stats'" (click)="setTab('stats')">Stats</button>
     </div>
 
     @if (error) {
@@ -54,6 +56,9 @@
         </div>
       }
     }
+
+    @if (activeTab === 'audit') { <swiftgame-admin-audit /> }
+    @if (activeTab === 'stats') { <swiftgame-admin-stats /> }
 
     <!-- Albums tab -->
     @if (activeTab === 'albums') {

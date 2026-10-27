@@ -14,7 +14,8 @@ public class AdminController(
     IPlayerRepository players,
     IAlbumRepository albums,
     IChatService chatService,
-    IHubContext<ChatHub> chatHub) : ControllerBase
+    IHubContext<ChatHub> chatHub,
+    IAuditService audit) : ControllerBase
 {
     private bool IsAdmin => User.FindFirst("isAdmin")?.Value == "true";
     private bool CanModerate => User.FindFirst("isAdmin")?.Value == "true"
@@ -59,6 +60,7 @@ public class AdminController(
 
         await chatService.DeleteMessagesByUserAsync(player.Username);
 
+        await audit.LogAsync("admin", detail: $"Banned {player.Username}");
         await chatHub.Clients.All.SendAsync("PlayerBanned", player.Username);
         await chatHub.Clients.All.SendAsync("ChatHistory", await chatService.GetRecentMessagesAsync());
 
@@ -78,6 +80,7 @@ public class AdminController(
         player.IsBanned = false;
         await players.UpdateAsync(player);
 
+        await audit.LogAsync("admin", detail: $"Unbanned {player.Username}");
         await chatHub.Clients.All.SendAsync("PlayerUnbanned", player.Username);
 
         return Ok(new { message = $"{player.Username} has been unbanned." });
@@ -96,8 +99,9 @@ public class AdminController(
 
         player.IsModerator = !player.IsModerator;
         await players.UpdateAsync(player);
+        await audit.LogAsync("admin", detail: $"{(player.IsModerator ? "Made" : "Removed")} {player.Username} {(player.IsModerator ? "a moderator" : "as moderator")}");
 
-        return Ok(new { message = $"{player.Username} moderator status: {player.IsModerator}" });
+        return Ok(new { message = player.IsModerator ? $"{player.Username} is now a moderator." : $"{player.Username} is no longer a moderator." });
     }
 
     // ── DELETE /api/admin/messages/{id} ──────────────────────────────────────
@@ -107,6 +111,7 @@ public class AdminController(
     {
         if (!CanModerate) return Forbid();
 
+        await audit.LogAsync("admin", detail: "Deleted a chat message");
         await chatService.DeleteMessageAsync(messageId);
         await chatHub.Clients.All.SendAsync("MessageDeleted", messageId);
 
@@ -136,6 +141,7 @@ public class AdminController(
 
         album.IsIncluded = !album.IsIncluded;
         await albums.UpdateAsync(album, cancellationToken);
+        await audit.LogAsync("admin", detail: $"{(album.IsIncluded ? "Included" : "Excluded")} {album.Name}");
 
         return Ok(new { album.Id, album.Name, album.IsIncluded });
     }

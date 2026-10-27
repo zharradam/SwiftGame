@@ -223,3 +223,6 @@
   }
 }
 button:focus-visible { outline: 2px solid #f0abfc; outline-offset: 2px; }
+
+.admin-panel--wide { width: min(94vw, 900px); max-height: 90vh; }
+swiftgame-admin-audit, swiftgame-admin-stats { flex: 1; }

@@ -16,10 +16,26 @@ public class SwiftGameDbContext : DbContext
     public DbSet<GameSession> GameSessions { get; set; }
     public DbSet<Album> Albums { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<AuditEvent> AuditEvents { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // ── AuditEvent ────────────────────────────────────────────────────────
+        modelBuilder.Entity<AuditEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.PlayerName).HasMaxLength(50);
+            entity.Property(e => e.VisitorId).HasMaxLength(36);
+            entity.Property(e => e.Source).HasMaxLength(60);
+            entity.Property(e => e.Device).HasMaxLength(10);
+            entity.Property(e => e.Detail).HasMaxLength(200);
+            entity.HasIndex(e => e.At);
+            entity.HasIndex(e => new { e.Type, e.At });
+            entity.HasIndex(e => e.VisitorId);
+        });
 
         // ── ChatMessage ───────────────────────────────────────────────────────
         modelBuilder.Entity<ChatMessage>(entity =>

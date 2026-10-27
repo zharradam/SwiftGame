@@ -25,6 +25,7 @@ public class GameController : ControllerBase
     private readonly GameSettings _gameSettings;
     private readonly IHubContext<LeaderboardHub> _hubContext;
     private readonly IHubContext<ChatHub> _chatContext;
+    private readonly IAuditService _audit;
 
     public GameController(
         IMusicProviderFactory factory,
@@ -33,7 +34,8 @@ public class GameController : ControllerBase
         IGameSessionRepository gameSessionRepository,
         IOptions<GameSettings> gameSettings,
         IHubContext<LeaderboardHub> hubContext,
-        IHubContext<ChatHub> chatHubContext)
+        IHubContext<ChatHub> chatHubContext,
+        IAuditService audit)
     {
         _previewResolver = factory.CreatePreviewResolver();
         _songRepository = songRepository;
@@ -42,6 +44,7 @@ public class GameController : ControllerBase
         _gameSettings = gameSettings.Value;
         _hubContext = hubContext;
         _chatContext = chatHubContext;
+        _audit = audit;
     }
 
     // ── GET api/game/config ───────────────────────────────────────────────────
@@ -160,6 +163,7 @@ public class GameController : ControllerBase
         var playerId = Guid.TryParse(request.PlayerId, out var pid) ? pid : Guid.Empty;
 
         var session = await _gameSessionRepository.CreateAsync(playerId, cancellationToken);
+        await _audit.LogAsync("game_start", playerId == Guid.Empty ? null : playerId, playerId == Guid.Empty ? "Guest" : null);
 
         return Ok(new StartSessionResponse
         {
@@ -183,6 +187,13 @@ public class GameController : ControllerBase
             request.SessionId, null, cancellationToken);
 
         var totalSessions = await _gameSessionRepository.CountCompletedAsync(cancellationToken);
+
+        if (session is not null)
+        {
+            var name = session.PlayerId == Guid.Empty ? "Guest" : session.Player?.Username;
+            await _audit.LogAsync("game_end", session.PlayerId == Guid.Empty ? null : session.PlayerId, name,
+                $"{session.TotalPoints:N0} pts · {session.Scores.Count(x => x.IsCorrect)}/{session.QuestionsCount} right · #{rank}");
+        }
 
         await _hubContext.Clients.Group("leaderboard")
             .SendAsync("LeaderboardUpdated", cancellationToken);

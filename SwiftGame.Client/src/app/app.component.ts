@@ -5,6 +5,7 @@ import { LeaderboardComponent } from './components/leaderboard/leaderboard.compo
 import { AuthModalComponent } from './components/auth-modal/auth-modal.component';
 import { ChatComponent } from './components/chat/chat.component';
 import { AuthService } from './services/auth.service';
+import { VisitService } from './services/visit.service';
 
 type Tab = 'game' | 'leaderboard' | 'chat';
 
@@ -25,7 +26,8 @@ export class AppComponent {
   private phone = signal(window.matchMedia('(max-width: 767px)').matches);
   get gameHidden(): boolean { return this.phone() && this.activeTab !== 'game'; }
 
-  constructor(readonly auth: AuthService) {
+  constructor(readonly auth: AuthService, visits: VisitService) {
+    visits.recordVisit();
     window.matchMedia('(max-width: 767px)').addEventListener('change', e => this.phone.set(e.matches));
   }
 

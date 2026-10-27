@@ -1,0 +1,144 @@
+<div class="stats-head">
+  <p class="stats-range">
+    @if (stats) { {{ dayLabel(stats.from) }} – {{ dayLabel(stats.to) }} } @else { &nbsp; }
+  </p>
+  <div class="stats-ranges" role="group" aria-label="Period">
+    @for (r of ranges; track r.d) {
+      <button type="button" [class.active]="days === r.d" [attr.aria-pressed]="days === r.d" (click)="setRange(r.d)">{{ r.l }}</button>
+    }
+  </div>
+</div>
+
+@if (error) { <div class="admin-error">{{ error }}</div> }
+
+@if (stats; as s) {
+  <div class="stats-body" [class.is-loading]="loading">
+
+    <!-- Tiles -->
+    <div class="tiles">
+      <div class="tile" style="--c:#c084fc">
+        <span class="tile-value">{{ s.totals.visits | number }}</span>
+        <span class="tile-label">Visits</span>
+        <span class="tile-delta">{{ delta(s.totals.visits, s.previous?.visits) }}</span>
+      </div>
+      <div class="tile" style="--c:#8ec5f5">
+        <span class="tile-value">{{ s.totals.visitors | number }}</span>
+        <span class="tile-label">Visitors</span>
+        <span class="tile-delta">{{ delta(s.totals.visitors, s.previous?.visitors) }}</span>
+      </div>
+      <div class="tile" style="--c:#8fd9b6">
+        <span class="tile-value">{{ s.totals.newVisitors | number }}</span>
+        <span class="tile-label">New visitors</span>
+      </div>
+      <div class="tile" style="--c:#ffb067">
+        <span class="tile-value">{{ s.totals.games | number }}</span>
+        <span class="tile-label">Games played</span>
+        <span class="tile-delta">{{ delta(s.totals.games, s.previous?.games) }}</span>
+      </div>
+      <div class="tile" style="--c:#f7b2d4">
+        <span class="tile-value">{{ s.totals.phonePercent }}%</span>
+        <span class="tile-label">On phones</span>
+      </div>
+    </div>
+    @if (s.previous) { <p class="stats-note">Change is against the previous {{ days }} days.</p> }
+
+    <!-- Visits per day -->
+    <section class="chart-block">
+      <h3>Visits per day</h3>
+      @let dayMax = max(s.perDay.map(d => d.count));
+      @let dayPeak = peak(s.perDay.map(d => d.count));
+      <div class="bars bars--days" [style.--n]="s.perDay.length">
+        @for (d of s.perDay; track d.date; let i = $index) {
+          <div class="bar" [class.peak]="i === dayPeak && d.count > 0" [style.height.%]="pct(d.count, dayMax)" [title]="dayLabel(d.date) + ': ' + d.count">
+            @if (i === dayPeak && d.count > 0) { <span class="bar-val">{{ d.count }}</span> }
+          </div>
+        }
+      </div>
+      <div class="axis"><span>{{ dayLabel(s.from) }}</span><span>{{ dayLabel(s.to) }}</span></div>
+    </section>
+
+    <div class="two-col">
+      <section class="chart-block">
+        <h3>By hour of day</h3>
+        @let hourMax = max(s.byHour);
+        @let hourPeak = peak(s.byHour);
+        <div class="bars bars--small">
+          @for (v of s.byHour; track $index; let i = $index) {
+            <div class="bar" [class.peak]="i === hourPeak && v > 0" [style.height.%]="pct(v, hourMax)" [title]="i + ':00 – ' + v">
+              @if (i === hourPeak && v > 0) { <span class="bar-val">{{ v }}</span> }
+            </div>
+          }
+        </div>
+        <div class="axis axis--hours"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span></span></div>
+      </section>
+
+      <section class="chart-block">
+        <h3>By day of week</h3>
+        @let wdMax = max(s.byWeekday);
+        @let wdPeak = peak(s.byWeekday);
+        <div class="bars bars--small bars--wide">
+          @for (v of s.byWeekday; track $index; let i = $index) {
+            <div class="bar" [class.peak]="i === wdPeak && v > 0" [style.height.%]="pct(v, wdMax)" [title]="weekdays[i] + ': ' + v">
+              @if (i === wdPeak && v > 0) { <span class="bar-val">{{ v }}</span> }
+            </div>
+          }
+        </div>
+        <div class="axis axis--even">@for (w of weekdays; track w) { <span>{{ w }}</span> }</div>
+      </section>
+    </div>
+
+    <div class="two-col">
+      <section class="chart-block">
+        <h3>What people do</h3>
+        @let actMax = max(counts(s.actions));
+        @for (a of s.actions; track a.label) {
+          <div class="hbar"><span class="hbar-fill" [style.width.%]="pct(a.count, actMax)"></span><span class="hbar-label">{{ actionLabel(a.label) }}</span><span class="hbar-val">{{ a.count | number }}</span></div>
+        } @empty { <p class="stats-empty">Nothing yet.</p> }
+      </section>
+
+      <section class="chart-block">
+        <h3>Came from</h3>
+        @let srcMax = max(counts(s.sources));
+        @for (a of s.sources; track a.label) {
+          <div class="hbar"><span class="hbar-fill" [style.width.%]="pct(a.count, srcMax)"></span><span class="hbar-label">{{ a.label }}</span><span class="hbar-val">{{ a.count | number }}</span></div>
+        } @empty { <p class="stats-empty">No visits yet.</p> }
+      </section>
+    </div>
+
+    <div class="two-col">
+      <section class="chart-block">
+        <h3>Top players</h3>
+        @let tpMax = max(counts(s.topPlayers));
+        @for (a of s.topPlayers; track a.label) {
+          <div class="hbar"><span class="hbar-fill" [style.width.%]="pct(a.count, tpMax)"></span><span class="hbar-label">{{ a.label }}</span><span class="hbar-val">{{ a.count }} {{ a.count === 1 ? 'game' : 'games' }}</span></div>
+        } @empty { <p class="stats-empty">No finished games yet.</p> }
+      </section>
+
+      <section class="chart-block">
+        <h3>Hardest songs</h3>
+        @for (h of s.hardest; track h.label + h.album) {
+          <div class="hbar hbar--warn">
+            <span class="hbar-fill" [style.width.%]="pct(h.misses, h.plays)"></span>
+            <span class="era-dot" [style.background]="eraColor(h.album)" aria-hidden="true"></span>
+            <span class="hbar-label">{{ h.label }}</span>
+            <span class="hbar-val">{{ h.misses }}/{{ h.plays }} missed</span>
+          </div>
+        } @empty { <p class="stats-empty">Needs a few more games.</p> }
+      </section>
+    </div>
+
+    <section class="chart-block">
+      <h3>Accuracy by era</h3>
+      @for (e of eras; track e.label) {
+        <div class="hbar">
+          <span class="hbar-fill" [style.width.%]="e.accuracy" [style.background]="e.color" style="opacity:.28"></span>
+          <span class="era-dot" [style.background]="e.color" aria-hidden="true"></span>
+          <span class="hbar-label">{{ e.label }}</span>
+          <span class="hbar-val">{{ e.accuracy }}% of {{ e.plays }}</span>
+        </div>
+      } @empty { <p class="stats-empty">Needs a few more games.</p> }
+    </section>
+  </div>
+} @else if (loading) {
+  <div class="admin-loading">Loading…</div>
+}

@@ -22,6 +22,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.Configure<GameSettings>(
@@ -179,6 +181,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SwiftGameDbContext>();
     await db.Database.MigrateAsync();
+
+    // Keep a year of audit history (the app restarts often on App Service, so this runs regularly)
+    var cutoff = DateTime.UtcNow.AddYears(-1);
+    await db.AuditEvents.Where(e => e.At < cutoff).ExecuteDeleteAsync();
 
     // Seed guest player for unauthenticated games
     var guestExists = await db.Players.AnyAsync(p => p.Id == Guid.Empty);

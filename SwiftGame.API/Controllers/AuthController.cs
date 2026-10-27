@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SwiftGame.API.Models.Auth;
@@ -16,6 +16,7 @@ public class AuthController(
     IPlayerRepository repo,
     IJwtService jwt,
     IConfiguration config,
+    IAuditService audit,
     ILogger<AuthController> logger) : ControllerBase
 {
     private readonly int _refreshExpiryDays =
@@ -54,6 +55,7 @@ public class AuthController(
 
         await repo.CreateAsync(player);
         logger.LogInformation("New player registered: {Username} ({Email})", player.Username, player.Email);
+        await audit.LogAsync("register", player.Id, player.Username);
 
         return Ok(BuildAuthResponse(player));
     }
@@ -76,6 +78,7 @@ public class AuthController(
         player.RefreshToken = jwt.GenerateRefreshToken();
         player.RefreshTokenExpiry = DateTime.UtcNow.AddDays(_refreshExpiryDays);
         await repo.UpdateAsync(player);
+        await audit.LogAsync("login", player.Id, player.Username);
 
         return Ok(BuildAuthResponse(player));
     }
@@ -117,6 +120,7 @@ public class AuthController(
             player.RefreshToken = null;
             player.RefreshTokenExpiry = null;
             await repo.UpdateAsync(player);
+            await audit.LogAsync("logout", player.Id, player.Username);
         }
 
         return NoContent();

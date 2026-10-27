@@ -687,7 +687,7 @@ onSignUpClick() { this.openRegister.emit(); }
   }
 
   async share(): Promise<void> {
-    const text = `Swiftology ${this.correctCount}/${this.questionsAnswered} · ${this.totalScore.toLocaleString()} pts\n${this.shareGrid}\nhttps://swiftology.uk`;
+    const text = `Swiftology ${this.correctCount}/${this.questionsAnswered} · ${this.totalScore.toLocaleString()} pts\n${this.shareGrid}\nhttps://swiftology.uk/?from=share`;
     try {
       if (navigator.share) {
         await navigator.share({ text });
