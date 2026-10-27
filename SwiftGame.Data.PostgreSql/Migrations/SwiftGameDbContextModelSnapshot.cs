@@ -27,11 +27,21 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ChallengeOf")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsComplete")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("classic");
 
                     b.Property<Guid>("PlayerId")
                         .HasColumnType("uuid");
@@ -48,6 +58,8 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PlayerId");
+
+                    b.HasIndex("IsComplete", "Mode", "CompletedAt");
 
                     b.ToTable("GameSessions");
                 });
@@ -163,6 +175,10 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Avatar")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -170,6 +186,10 @@ namespace SwiftGame.Data.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FavouriteEra")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<bool>("IsAdmin")
                         .HasColumnType("boolean");

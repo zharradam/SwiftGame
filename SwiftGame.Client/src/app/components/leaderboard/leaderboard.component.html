@@ -5,6 +5,7 @@
     <div class="period-toggle" role="group" aria-label="Leaderboard period">
       <button type="button" [class.active]="period === 'all'" [attr.aria-pressed]="period === 'all'" (click)="setPeriod('all')">All time</button>
       <button type="button" [class.active]="period === 'today'" [attr.aria-pressed]="period === 'today'" (click)="setPeriod('today')">Today</button>
+      <button type="button" [class.active]="period === 'daily'" [attr.aria-pressed]="period === 'daily'" (click)="setPeriod('daily')">Daily</button>
     </div>
   </div>
   <p class="leaderboard-caption">Highest-scoring games, with the date played and average answer time.</p>
@@ -19,7 +20,7 @@
   </div>
 
   <div class="state-empty" *ngIf="state === 'loaded' && entries.length === 0">
-    <p>{{ period === 'today' ? 'No games today yet — be the first!' : 'No scores yet — be the first to play!' }}</p>
+    <p>{{ period === 'daily' ? "Nobody's played today's Daily Swiftle yet." : period === 'today' ? 'No games today yet — be the first!' : 'No scores yet — be the first to play!' }}</p>
   </div>
 
   <div class="leaderboard-list" *ngIf="state === 'loaded' && entries.length > 0">
@@ -34,7 +35,7 @@
       <span class="entry-rank">{{ getMedal(i) }}</span>
 
       <div class="entry-details">
-        <span class="entry-player">{{ entry.playerName }}</span>
+        <span class="entry-player" [style.color]="eraColor(entry.era)">@if (entry.avatar) {<span class="entry-avatar" aria-hidden="true">{{ entry.avatar }}</span>}{{ entry.playerName }}</span>
         <span class="entry-song">{{ entry.playedAt | date:'d MMM' }} · {{ formatTime(entry.responseTimeMs) }} avg</span>
       </div>
 

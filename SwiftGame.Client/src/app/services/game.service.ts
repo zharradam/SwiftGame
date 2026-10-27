@@ -10,18 +10,47 @@ export interface RoundResponse {
   previewUrl: string;
   startAt: number;
   choices: string[];
+  kind: 'song' | 'era';
+}
+
+export type GameMode = 'classic' | 'daily' | 'challenge' | 'album' | 'eras';
+
+export interface SongSet {
+  mode: 'daily' | 'challenge';
+  songIds: string[];
+  date?: string;
+  from?: string;
+  challenger?: string;
+  challengerScore?: number;
+  challengerRounds?: { isCorrect: boolean; pointsEarned: number }[];
+}
+
+export interface AlbumOption { id: string; name: string; songs: number; era: string | null; }
+
+export interface Progress {
+  avatar: string | null;
+  favouriteEra: string | null;
+  totalPoints: number;
+  games: number;
+  streak: number;
+  playedDailyToday: boolean;
+  beads: { key: string; label: string; correct: number; earned: boolean }[];
+  beadAt: number;
+  goldBeads: number;
 }
 
 export interface LeaderboardEntry {
   id:            string;
   playerName:    string;
+  avatar?:       string | null;
+  era?:          string | null;
   songTitle:     string;
   pointsEarned:  number;
   responseTimeMs: number;
   playedAt:      string;
 }
 
-export type LeaderboardPeriod = 'all' | 'today';
+export type LeaderboardPeriod = 'all' | 'today' | 'daily';
 
 export interface MyBest {
   rank:  number;
@@ -50,6 +79,7 @@ export interface SubmitAnswerResponse {
   responseTimeMs: number;
   album: string;
   albumArt: string;
+  correctEra?: string;
 }
 
 export interface StartSessionResponse {
@@ -58,6 +88,7 @@ export interface StartSessionResponse {
 }
 
 export interface EndSessionResponse {
+  mode?:        GameMode;
   rank:         number;
   totalPlayers: number;
   playerId:     string;
@@ -71,11 +102,35 @@ export class GameService {
 
   constructor(private http: HttpClient) {}
 
-  getRound(excludeIds: string[] = []): Observable<RoundResponse> {
-    const params = excludeIds.length 
-      ? `?excludeIds=${excludeIds.join(',')}` 
-      : '';
-    return this.http.get<RoundResponse>(`${this.apiUrl}/game/round${params}`);
+  getRound(excludeIds: string[] = [], opts: { songId?: string; albums?: string[]; kind?: 'era' } = {}): Observable<RoundResponse> {
+    const params: Record<string, string> = {};
+    if (excludeIds.length) params['excludeIds'] = excludeIds.join(',');
+    if (opts.songId) params['songId'] = opts.songId;
+    if (opts.albums?.length) params['albums'] = opts.albums.join(',');
+    if (opts.kind) params['kind'] = opts.kind;
+    return this.http.get<RoundResponse>(`${this.apiUrl}/game/round`, { params });
+  }
+
+  getSet(mode: 'daily' | 'challenge', from?: string): Observable<SongSet> {
+    const params: Record<string, string> = { mode };
+    if (from) params['from'] = from;
+    return this.http.get<SongSet>(`${this.apiUrl}/game/set`, { params });
+  }
+
+  getAlbums(): Observable<AlbumOption[]> {
+    return this.http.get<AlbumOption[]>(`${this.apiUrl}/game/albums`);
+  }
+
+  getProgress(playerId: string): Observable<Progress> {
+    return this.http.get<Progress>(`${this.apiUrl}/players/${playerId}/progress`);
+  }
+
+  updateProfile(avatar: string | null, favouriteEra: string | null): Observable<{ avatar: string | null; favouriteEra: string | null }> {
+    return this.http.put<{ avatar: string | null; favouriteEra: string | null }>(`${this.apiUrl}/players/me/profile`, { avatar, favouriteEra });
+  }
+
+  getAvatars(): Observable<{ avatars: string[] }> {
+    return this.http.get<{ avatars: string[] }>(`${this.apiUrl}/players/avatars`);
   }
 
   submitAnswer(request: SubmitAnswerRequest): Observable<SubmitAnswerResponse> {
@@ -102,10 +157,10 @@ export class GameService {
     return this.http.get<GameConfig>(`${this.apiUrl}/game/config`);
   }
 
-  startSession(playerId?: string): Observable<StartSessionResponse> {
+  startSession(playerId?: string, mode: GameMode = 'classic', challengeOf?: string): Observable<StartSessionResponse> {
     return this.http.post<StartSessionResponse>(
       `${this.apiUrl}/game/session/start`,
-      { playerId: playerId ?? '00000000-0000-0000-0000-000000000000' }
+      { playerId: playerId ?? '00000000-0000-0000-0000-000000000000', mode, challengeOf }
     );
   }
 

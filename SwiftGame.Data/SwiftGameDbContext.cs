@@ -66,6 +66,9 @@ public class SwiftGameDbContext : DbContext
             entity.HasIndex(p => p.Email)
                   .IsUnique();
 
+            entity.Property(p => p.Avatar).HasMaxLength(16);
+            entity.Property(p => p.FavouriteEra).HasMaxLength(20);
+
             entity.HasIndex(p => p.Username)
                   .IsUnique();
         });
@@ -137,6 +140,9 @@ public class SwiftGameDbContext : DbContext
 
             entity.Property(g => g.Id)
                   .ValueGeneratedNever();
+
+            entity.Property(g => g.Mode).HasMaxLength(20).HasDefaultValue("classic");
+            entity.HasIndex(g => new { g.IsComplete, g.Mode, g.CompletedAt });
 
             entity.HasOne(g => g.Player)
                   .WithMany(p => p.GameSessions)

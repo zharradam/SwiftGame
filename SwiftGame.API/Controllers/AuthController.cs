@@ -153,7 +153,7 @@ public class AuthController(
             AccessToken: accessToken,
             RefreshToken: player.RefreshToken!,
             AccessTokenExpiry: expiry,
-            User: new UserDto(player.Id, player.Username, player.Email)
+            User: new UserDto(player.Id, player.Username, player.Email, player.Avatar, player.FavouriteEra)
         );
     }
 

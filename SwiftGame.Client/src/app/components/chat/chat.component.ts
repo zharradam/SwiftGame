@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, AfterViewChecked, ViewChild, ElementRef, 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { SignalrService, ChatMessage, Presence, ScoreAnnouncement } from '../../services/signalr.service';
+import { SignalrService, ChatMessage, Presence, ScoreAnnouncement, Reaction } from '../../services/signalr.service';
 import { AuthService } from '../../services/auth.service';
 import { AdminPanelComponent } from '../admin-panel/admin-panel.component';
 
@@ -21,6 +21,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   presence:      Presence      = { count: 0, names: [] };
   online:        boolean       = true;
   toast:         ScoreAnnouncement | null = null;
+  readonly reactionEmoji = ['🔥', '💜', '👏', '😱', '🫶'];
+  lastReaction:  Reaction | null = null;
+  reacted = false;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldScroll  = false;
   private subscriptions: Subscription[] = [];
@@ -42,8 +45,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.subscriptions.push(
       this.signalr.presence.subscribe(p => this.presence = p),
       this.signalr.chatOnline.subscribe(o => this.online = o),
+      this.signalr.reactions.subscribe(r => { this.lastReaction = r; setTimeout(() => { if (this.lastReaction === r) this.lastReaction = null; }, 3000); }),
       this.signalr.scoreAnnounced.subscribe(a => {
         this.toast = a;
+        this.reacted = false;
         if (this.toastTimer) clearTimeout(this.toastTimer);
         this.toastTimer = setTimeout(() => this.toast = null, 6000);
       })
@@ -67,6 +72,16 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   ngOnDestroy(): void {
     this.subscriptions.forEach(s => s.unsubscribe());
     if (this.toastTimer) clearTimeout(this.toastTimer);
+  }
+
+  react(emoji: string): void {
+    if (!this.toast || this.reacted) return;
+    this.signalr.react(this.toast.playerName, emoji);
+    this.reacted = true;
+  }
+
+  get canReact(): boolean {
+    return !!this.toast && this.auth.isAuthenticated() && !this.auth.isBanned() && this.toast.playerName !== this.auth.username();
   }
 
   get chatCount(): number {

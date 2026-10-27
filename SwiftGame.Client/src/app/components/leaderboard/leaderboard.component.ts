@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { GameService, LeaderboardEntry, LeaderboardPeriod, MyBest } from '../../services/game.service';
 import { AuthService } from '../../services/auth.service';
+import { eraByKey } from '../game/eras';
 import { SignalrService } from '../../services/signalr.service';
 
 @Component({
@@ -70,6 +71,8 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
       error: ()     => { this.myBest = null; }
     });
   }
+
+  eraColor(key: string | null | undefined): string | null { return eraByKey(key)?.color ?? null; }
 
   isMe(e: LeaderboardEntry): boolean {
     return this.auth.isAuthenticated() && e.playerName === this.auth.username();

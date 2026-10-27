@@ -12,6 +12,8 @@ export interface User {
   isAdmin:     boolean;
   isModerator: boolean;
   isBanned:    boolean;
+  avatar?:      string | null;
+  favouriteEra?: string | null;
 }
 
 export interface AuthResponse {
@@ -88,6 +90,15 @@ export class AuthService {
     );
   }
 
+  // Profile edits don't change the token, so update the stored user directly
+  updateUser(patch: Partial<User>) {
+    const u = this._user();
+    if (!u) return;
+    const next = { ...u, ...patch };
+    localStorage.setItem(USER_KEY, JSON.stringify(next));
+    this._user.set(next);
+  }
+
   clearError() {
     this._error.set(null);
   }
@@ -143,6 +154,8 @@ export class AuthService {
       isAdmin:     payload['isAdmin']     === 'true',
       isModerator: payload['isModerator'] === 'true',
       isBanned:    payload['isBanned']    === 'true',
+      avatar:      (res.user as User).avatar ?? null,
+      favouriteEra: (res.user as User).favouriteEra ?? null,
     };
 
     localStorage.setItem(ACCESS_TOKEN_KEY,  res.accessToken);

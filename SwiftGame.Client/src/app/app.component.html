@@ -5,6 +5,14 @@
     (authenticated)="showAuthModal = false" />
 }
 
+@if (showProfile) {
+  @defer { <swiftgame-profile (close)="showProfile = false" /> }
+}
+
+@if (reactionToast) {
+  <div class="reaction-toast" role="status">{{ reactionToast }}</div>
+}
+
 <div class="app-layout">
 
   <!-- Header -->
@@ -12,7 +20,9 @@
     <span class="app-header__title">🎵 {{ title }}</span>
     <div class="app-header__auth">
       @if (auth.isAuthenticated()) {
-        <span class="user-chip">👤 {{ auth.username() }}</span>
+        <button class="user-chip" (click)="showProfile = true" aria-label="Your profile">
+          <span aria-hidden="true">{{ auth.user()?.avatar || '👤' }}</span> {{ auth.username() }}
+        </button>
         <button class="btn-ghost" (click)="auth.logout()">Log out</button>
       } @else {
         <button class="btn-ghost" (click)="openLogin()">Log in</button>

@@ -1,4 +1,4 @@
-﻿namespace SwiftGame.API.Models;
+namespace SwiftGame.API.Models;
 
 public class RoundResponse
 {
@@ -8,4 +8,5 @@ public class RoundResponse
     public string PreviewUrl { get; set; } = string.Empty;
     public int StartAt { get; set; }
     public List<string> Choices { get; set; } = [];
+    public string Kind { get; set; } = "song";   // "song": name the song; "era": name the album era
 }

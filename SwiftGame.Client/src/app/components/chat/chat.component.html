@@ -28,10 +28,17 @@
 
   <!-- Who's here + transient score announcements -->
   <div class="chat-presence">
-    @if (!online) {
+    @if (lastReaction) {
+      <span class="chat-toast">{{ lastReaction.from }} {{ lastReaction.emoji }} {{ lastReaction.to }}</span>
+    } @else if (!online) {
       <span class="chat-reconnecting">Reconnecting to chat…</span>
     } @else if (toast) {
       <span class="chat-toast">🎵 {{ toast.playerName }} just scored {{ toast.points | number }} · #{{ toast.rank }}</span>
+      @if (canReact && !reacted) {
+        <span class="chat-react" role="group" [attr.aria-label]="'React to ' + toast.playerName + 's score'">
+          @for (e of reactionEmoji; track e) { <button (click)="react(e)" [attr.aria-label]="'Send ' + e">{{ e }}</button> }
+        </span>
+      }
     } @else {
       <span class="chat-online"><span class="chat-online__dot"></span>{{ presence.count }} here</span>
       @if (presenceLabel) { <span class="chat-names">{{ presenceLabel }}</span> }

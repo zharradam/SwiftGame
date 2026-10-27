@@ -1,6 +1,9 @@
-import { Component, OnDestroy, OnInit, ViewChild, ElementRef, Output, EventEmitter, Input, HostListener } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, ElementRef, Output, EventEmitter, Input, HostListener, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GameService, RoundResponse, SubmitAnswerResponse } from '../../services/game.service';
+import { GameService, RoundResponse, SubmitAnswerResponse, GameMode, SongSet, AlbumOption, Progress } from '../../services/game.service';
+import { of, Observable } from 'rxjs';
+import { drawStory } from './story';
+import { ALL_ERAS } from './eras';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { eraFor, artworkLarge, Era } from './eras';
@@ -40,6 +43,21 @@ export class GameComponent implements OnInit, OnDestroy {
   streak:            number   = 0;
   previousBest:      number | null = null;   // best score before this game, logged-in players only
   shareState:        'idle' | 'copied' | 'shared' = 'idle';
+
+  // ── Modes ──
+  mode:          GameMode = 'classic';
+  songSet:       string[] | null = null;     // daily / challenge: the fixed songs, in order
+  private setIndex = 0;
+  dailyDate      = '';
+  challenge:     SongSet | null = null;      // set when the page was opened from a challenge link
+  albums:        AlbumOption[] = [];
+  pickedEras     = new Set<string>();
+  showAlbumPicker = false;
+  progressBefore: Progress | null = null;
+  progressAfter:  Progress | null = null;
+  easterEgg      = '';
+  storyState:    'idle' | 'working' | 'done' | 'failed' = 'idle';
+  readonly eraList = ALL_ERAS;
   readonly gameTitle: string = 'Swiftology';
 
   // True when the phone layout is showing another tab: pause the round instead of letting it time out unseen
@@ -72,9 +90,22 @@ export class GameComponent implements OnInit, OnDestroy {
 
   @ViewChild('fireworksCanvas') fireworksCanvas!: ElementRef<HTMLCanvasElement>;
 
-  constructor(private gameService: GameService, public auth: AuthService) {}
+  constructor(private gameService: GameService, public auth: AuthService) {
+    // logging in or out changes the daily lock and bead progress
+    effect(() => { this.auth.user(); this.refreshProgress(); });
+  }
 
   ngOnInit(): void {
+    const challengeId = new URLSearchParams(location.search).get('challenge');
+    if (challengeId) {
+      this.gameService.getSet('challenge', challengeId).subscribe({
+        next:  set => this.challenge = set,
+        error: () => this.startError = "That challenge link has expired, but you can still play a normal game."
+      });
+      history.replaceState(null, '', location.pathname);   // a refresh shouldn't re-open the challenge
+    }
+    this.refreshProgress();
+
     this.gameService.getConfig().subscribe({
       next: (config) => {
         this.questionsPerGame = config.questionsPerGame;
@@ -174,7 +205,7 @@ onSignUpClick() { this.openRegister.emit(); }
     this.elapsedMs      = 0;
     this.stopAudio();
 
-    this.gameService.getRound(this.usedSongIds).subscribe({
+    this.fetchRound().subscribe({
       next:  (round) => this.startPlaying(round),
       error: (err) => {
         this.state        = 'error';
@@ -183,7 +214,17 @@ onSignUpClick() { this.openRegister.emit(); }
     });
   }
 
+  private fetchRound(): Observable<RoundResponse> {
+    const songId = this.songSet?.[this.setIndex];
+    return this.gameService.getRound(this.usedSongIds, {
+      songId,
+      albums: this.mode === 'album' ? this.selectedAlbumIds : undefined,
+      kind:   this.mode === 'eras' ? 'era' : undefined
+    });
+  }
+
   private startPlaying(round: RoundResponse): void {
+    if (this.songSet) this.setIndex++;
     this.usedSongIds.push(round.songDbId);
     this.currentQuestion = this.questionsAnswered + 1;
     this.round          = round;
@@ -233,6 +274,9 @@ onSignUpClick() { this.openRegister.emit(); }
             shown = true;
             this.gameOver = true;
             this.announcement = `Game over. ${this.totalScore} points, ${this.correctCount} correct.`;
+            this.easterEgg = this.findEasterEgg();
+            if (this.mode === 'daily') this.markDailyDone();
+            this.refreshProgress(true);
             if (this.showFireworks) setTimeout(() => this.launchFireworks(), 100);
           };
           const minDelay = new Promise(r => setTimeout(r, 1500));
@@ -259,7 +303,8 @@ onSignUpClick() { this.openRegister.emit(); }
 
   getChoiceClass(choice: string): string {
     if (this.state !== 'answered' || !this.result) return '';
-    if (choice === this.result.correctTitle) return 'correct';
+    const right = this.round?.kind === 'era' ? this.result.correctEra : this.result.correctTitle;
+    if (choice === right) return 'correct';
     if (choice === this.selectedChoice)      return 'incorrect';
     return '';
   }
@@ -282,8 +327,16 @@ onSignUpClick() { this.openRegister.emit(); }
   slowStart = false;
   private slowTimer: ReturnType<typeof setTimeout> | null = null;
 
-  startGame(): void {
+  startGame(mode: GameMode = 'classic'): void {
     if (this.gameStarted) return;   // double-click guard
+    if (mode === 'daily' && this.dailyDone) return;
+    if (mode === 'album' && !this.pickedEras.size) { this.showAlbumPicker = true; return; }
+    this.mode     = mode;
+    this.songSet  = null;
+    this.setIndex = 0;
+    this.easterEgg = '';
+    this.storyState = 'idle';
+    this.progressBefore = this.progressAfter ?? this.progressBefore;
     this.startError = '';
     this.slowStart  = false;
     if (this.slowTimer) clearTimeout(this.slowTimer);
@@ -292,13 +345,21 @@ onSignUpClick() { this.openRegister.emit(); }
     this.usedSongIds = [];
     this.gameStarted = true;
     this.loadPreviousBest();
-    this.gameService.startSession(this.playerId).subscribe({
+
+    const set$: Observable<SongSet | null> =
+      mode === 'daily'     ? this.gameService.getSet('daily') :
+      mode === 'challenge' ? of(this.challenge) : of(null);
+
+    set$.subscribe({ next: set => {
+    this.songSet   = set?.songIds?.length ? set.songIds : null;
+    if (set?.date) this.dailyDate = set.date;
+    this.gameService.startSession(this.playerId, mode, mode === 'challenge' ? this.challenge?.from : undefined).subscribe({
       next: (response) => {
         this.sessionId = response.sessionId;
         this.buildImageQueue();
         this.state = 'countdown';
 
-        this.gameService.getRound(this.usedSongIds).subscribe({
+        this.fetchRound().subscribe({
           next: (round) => {
             this.slowStart = false;
             this.startCountdown(3, () => this.startPlaying(round));
@@ -308,6 +369,7 @@ onSignUpClick() { this.openRegister.emit(); }
       },
       error: (err) => this.failStart(err)
     });
+    }, error: (err) => this.failStart(err) });
   }
 
   startError = '';
@@ -329,8 +391,10 @@ onSignUpClick() { this.openRegister.emit(); }
 
   restartGame(): void {
     if (!this.gameOver) return;     // double-tap guard: the first tap clears gameOver
+    const mode = this.mode === 'challenge' || this.mode === 'daily' ? 'classic' : this.mode;
+    this.challenge = this.mode === 'challenge' ? null : this.challenge;
     this.goHome();
-    this.startGame();
+    this.startGame(mode);
   }
 
   goHome(): void {
@@ -687,7 +751,7 @@ onSignUpClick() { this.openRegister.emit(); }
   }
 
   async share(): Promise<void> {
-    const text = `Swiftology ${this.correctCount}/${this.questionsAnswered} · ${this.totalScore.toLocaleString()} pts\n${this.shareGrid}\nhttps://swiftology.uk/?from=share`;
+    const text = `${this.shareLabel} ${this.correctCount}/${this.questionsAnswered} · ${this.totalScore.toLocaleString()} pts\n${this.shareGrid}\n${this.ranked ? 'Can you beat me? ' : ''}${this.shareLink}`;
     try {
       if (navigator.share) {
         await navigator.share({ text });
@@ -700,5 +764,141 @@ onSignUpClick() { this.openRegister.emit(); }
       return; // user cancelled the share sheet
     }
     setTimeout(() => this.shareState = 'idle', 2500);
+  }
+
+  // ── Modes, challenges, progress ─────────────────────────────────────────────
+
+  get ranked(): boolean { return this.mode === 'classic' || this.mode === 'daily' || this.mode === 'challenge'; }
+
+  // Ranked games share a challenge: the friend plays the same songs
+  get shareLink(): string {
+    return this.ranked && this.sessionId
+      ? `https://swiftology.uk/?challenge=${this.sessionId}&from=share`
+      : 'https://swiftology.uk/?from=share';
+  }
+
+  get shareLabel(): string {
+    if (this.mode === 'daily') return `Daily Swiftle ${this.dailyLabel}`;
+    if (this.mode === 'eras') return 'Swiftology · Which album?';
+    if (this.mode === 'album') return 'Swiftology · Album mode';
+    return 'Swiftology';
+  }
+
+  get dailyLabel(): string {
+    const d = this.dailyDate ? new Date(this.dailyDate + 'T00:00:00') : new Date();
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  }
+
+  get modeLabel(): string {
+    return { classic: '', daily: `Daily Swiftle · ${this.dailyLabel}`, challenge: `Challenge from ${this.challenge?.challenger ?? 'a friend'}`,
+             album: 'Album mode', eras: 'Which album?' }[this.mode];
+  }
+
+  // ── Daily: one go per day ──
+
+  private get todayKey(): string { return new Date().toLocaleDateString('en-CA'); }
+
+  get dailyDone(): boolean {
+    if (this.auth.isAuthenticated()) return !!this.progressBefore?.playedDailyToday;
+    try { return localStorage.getItem('swiftgame_daily') === this.todayKey; } catch { return false; }
+  }
+
+  private markDailyDone(): void {
+    try { localStorage.setItem('swiftgame_daily', this.todayKey); } catch { /* private mode */ }
+  }
+
+  get dailyStreak(): number { return (this.progressAfter ?? this.progressBefore)?.streak ?? 0; }
+
+  // ── Album mode: pick eras, play every album in them ──
+
+  openAlbumPicker(): void {
+    this.showAlbumPicker = !this.showAlbumPicker;
+    if (!this.albums.length) this.gameService.getAlbums().subscribe({ next: a => this.albums = a, error: () => {} });
+  }
+
+  toggleEra(key: string): void {
+    this.pickedEras.has(key) ? this.pickedEras.delete(key) : this.pickedEras.add(key);
+  }
+
+  get pickableEras() {
+    const present = new Set(this.albums.map(a => a.era));
+    return this.eraList.filter(e => present.has(e.key));
+  }
+
+  get selectedAlbumIds(): string[] {
+    return this.albums.filter(a => a.era && this.pickedEras.has(a.era)).map(a => a.id);
+  }
+
+  // ── Challenge result ──
+
+  get challengeVerdict(): string {
+    if (this.mode !== 'challenge' || !this.challenge) return '';
+    const them = this.challenge.challengerScore ?? 0;
+    const name = this.challenge.challenger;
+    const who  = !name || name === 'A friend' ? 'your friend' : name;
+    if (this.totalScore > them) return `You beat ${who} by ${(this.totalScore - them).toLocaleString()}!`;
+    if (this.totalScore === them) return `A dead heat with ${who}!`;
+    return `${who} wins this one by ${(them - this.totalScore).toLocaleString()}. Rematch?`;
+  }
+
+  get challengerGrid(): string {
+    return (this.challenge?.challengerRounds ?? []).map(r => r.isCorrect ? '🟩' : '⬛').join('');
+  }
+
+  // ── Bracelet beads earned this game ──
+
+  private refreshProgress(after = false): void {
+    if (!this.auth.isAuthenticated()) { this.progressBefore = this.progressAfter = null; return; }
+    this.gameService.getProgress(this.playerId).subscribe({
+      next: p => after ? this.progressAfter = p : (this.progressBefore = p),
+      error: () => {}
+    });
+  }
+
+  get newBeads(): string[] {
+    if (!this.progressBefore || !this.progressAfter) return [];
+    const had = new Set(this.progressBefore.beads.filter(b => b.earned).map(b => b.key));
+    return this.progressAfter.beads.filter(b => b.earned && !had.has(b.key)).map(b => b.label);
+  }
+
+  get newGoldBead(): boolean {
+    return !!this.progressBefore && !!this.progressAfter && this.progressAfter.goldBeads > this.progressBefore.goldBeads;
+  }
+
+  // ── Easter eggs ──
+
+  private findEasterEgg(): string {
+    if (this.questionsAnswered >= 10 && this.correctCount === this.questionsAnswered) return 'Ten out of ten. Mastermind behaviour. 🧠';
+    if (String(this.totalScore).includes('13')) return 'There\'s a 13 in your score. Taylor would approve. 🫶';
+    if (new Date().getMinutes() === 13) return 'You finished at 13 past. That\'s a sign. ✨';
+    return '';
+  }
+
+  // ── Story image ──
+
+  async saveStory(): Promise<void> {
+    if (this.storyState === 'working') return;
+    this.storyState = 'working';
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--skin-1').trim() || '#ff69b4';
+    const input = { score: this.totalScore, correct: this.correctCount, total: this.questionsAnswered,
+                    rounds: this.roundResults, label: this.modeLabel || 'Guess the song', accent };
+    const blob = (await drawStory(input)) ?? (await drawStory({ ...input, covers: false }));
+    if (!blob) { this.storyState = 'failed'; return; }
+
+    const file = new File([blob], 'swiftology-story.png', { type: 'image/png' });
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text: this.shareLink });
+      } else {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = file.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      }
+      this.storyState = 'done';
+    } catch {
+      this.storyState = 'idle';   // share sheet cancelled
+    }
   }
 }

@@ -19,6 +19,13 @@
       <p class="game-subtitle">HOW WELL DO YOU KNOW TAYLOR SWIFT?</p>
     </div>
 
+    @if (challenge) {
+      <div class="challenge-banner">
+        <p><strong>{{ challenge.challenger }}</strong> challenged you to beat <strong>{{ challenge.challengerScore | number }}</strong> on the same {{ challenge.songIds.length }} songs.</p>
+        <button class="btn-primary" (click)="startGame('challenge')" [disabled]="gameStarted">Accept the challenge</button>
+      </div>
+    }
+
     <div class="start-hero" *ngIf="imageBaseUrl">
       <img [src]="imageBaseUrl + '/image-08.jpeg'" alt="Taylor Swift"/>
     </div>
@@ -56,6 +63,41 @@
       Play now
     </button>
     <p class="start-hint">🎵 Turn up your volume!</p>
+
+    <div class="modes">
+      <button class="mode-card" (click)="startGame('daily')" [disabled]="gameStarted || dailyDone">
+        <span class="mode-name">Daily Swiftle</span>
+        <span class="mode-sub">
+          @if (dailyDone) { Done for today. Back tomorrow! }
+          @else { Same 10 songs for everyone today }
+        </span>
+        @if (dailyStreak > 0) { <span class="mode-badge">🔥 {{ dailyStreak }}-day streak</span> }
+      </button>
+      <button class="mode-card" (click)="openAlbumPicker()" [class.open]="showAlbumPicker" [disabled]="gameStarted">
+        <span class="mode-name">Album mode</span>
+        <span class="mode-sub">Only songs from the eras you pick</span>
+      </button>
+      <button class="mode-card" (click)="startGame('eras')" [disabled]="gameStarted">
+        <span class="mode-name">Which album?</span>
+        <span class="mode-sub">Name the era, not the song</span>
+      </button>
+    </div>
+    <p class="modes-note">Album mode and Which album? are practice: they don't go on the leaderboard.</p>
+
+    @if (showAlbumPicker) {
+      <div class="album-picker">
+        <p class="album-picker__title">Pick one or more eras</p>
+        <div class="album-picker__eras">
+          @for (e of pickableEras; track e.key) {
+            <button class="era-pick" [class.on]="pickedEras.has(e.key)" [style.--c]="e.color"
+                    [attr.aria-pressed]="pickedEras.has(e.key)" (click)="toggleEra(e.key)">{{ e.label }}</button>
+          } @empty { <span class="album-picker__loading">Loading eras…</span> }
+        </div>
+        <button class="btn-primary" (click)="startGame('album')" [disabled]="!pickedEras.size || gameStarted">
+          Play {{ pickedEras.size || '' }} {{ pickedEras.size === 1 ? 'era' : 'eras' }}
+        </button>
+      </div>
+    }
   </div>
 
   <!-- Game -->
@@ -92,21 +134,36 @@
         <span class="rank-label">of {{ totalPlayers }} {{ totalPlayers === 1 ? 'game' : 'games' }}</span>
       </div>
 
-      <h2 class="game-over-title" *ngIf="rankMessage">{{ rankMessage }}</h2>
+      @if (modeLabel) { <p class="game-over-mode">{{ modeLabel }}</p> }
+      @if (challengeVerdict) {
+        <h2 class="game-over-title">{{ challengeVerdict }}</h2>
+      } @else {
+        <h2 class="game-over-title" *ngIf="rankMessage">{{ rankMessage }}</h2>
+      }
 
       <p class="game-over-score">{{ totalScore | number }}</p>
       <p class="game-over-label">Total points</p>
 
 
       <p class="game-over-grid" aria-label="{{ correctCount }} of {{ questionsAnswered }} right">{{ shareGrid }}</p>
+      @if (challengerGrid) {
+        <p class="game-over-vs">{{ challenge?.challenger }}: {{ challenge?.challengerScore | number }} <span aria-hidden="true">{{ challengerGrid }}</span></p>
+      }
+      @if (easterEgg) { <p class="easter-egg">{{ easterEgg }}</p> }
+      @for (b of newBeads; track b) { <p class="new-bead">New bracelet bead: <strong>{{ b }}</strong> 📿</p> }
+      @if (newGoldBead) { <p class="new-bead new-bead--gold">Gold bead for a perfect game! 🏅</p> }
+      @if (mode === 'daily' && dailyStreak > 0) { <p class="new-bead">🔥 {{ dailyStreak }}-day Daily streak</p> }
 
       <div class="game-over-buttons">
         <button class="btn-primary btn-large" (click)="restartGame()">
           Play again
         </button>
         <div class="game-over-row">
+          <button class="btn-secondary" (click)="saveStory()" [disabled]="storyState === 'working'">
+            {{ storyState === 'working' ? 'Making…' : storyState === 'done' ? 'Saved!' : storyState === 'failed' ? 'Try again' : 'Story image' }}
+          </button>
           <button class="btn-secondary" (click)="share()">
-            {{ shareState === 'copied' ? 'Copied!' : shareState === 'shared' ? 'Shared' : 'Share score' }}
+            {{ shareState === 'copied' ? 'Copied!' : shareState === 'shared' ? 'Shared' : ranked ? 'Challenge a friend' : 'Share score' }}
           </button>
           <button class="btn-secondary" (click)="goHome()">
             Home
@@ -187,7 +244,7 @@
       </div>
 
       <div class="game-progress">
-        <span class="progress-text">Song {{ displayQuestion }} of {{ questionsPerGame }}</span>
+        <span class="progress-text">{{ mode === 'eras' ? 'Which album?' : mode === 'daily' ? 'Daily' : 'Song' }} {{ displayQuestion }} of {{ questionsPerGame }}</span>
         <div class="round-dots" role="img" [attr.aria-label]="roundDotsLabel">
           <span class="round-dot"
                 *ngFor="let d of roundDots; let i = index"

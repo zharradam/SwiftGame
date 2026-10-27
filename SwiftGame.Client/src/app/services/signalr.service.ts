@@ -18,6 +18,8 @@ export interface Presence {
   names: string[];
 }
 
+export interface Reaction { from: string; to: string; emoji: string; }
+
 export interface ScoreAnnouncement {
   playerName: string;
   points:     number;
@@ -40,6 +42,7 @@ export class SignalrService implements OnDestroy {
   private presence$     = new BehaviorSubject<Presence>({ count: 0, names: [] });
   private chatOnline$   = new BehaviorSubject<boolean>(true);
   private scoreAnnounced$ = new Subject<ScoreAnnouncement>();
+  private reaction$       = new Subject<Reaction>();
 
   readonly allMessages  = this.allMessages$.asObservable();
   readonly chatError    = this.chatError$.asObservable();
@@ -47,6 +50,7 @@ export class SignalrService implements OnDestroy {
   readonly presence     = this.presence$.asObservable();
   readonly chatOnline   = this.chatOnline$.asObservable();
   readonly scoreAnnounced = this.scoreAnnounced$.asObservable();
+  readonly reactions      = this.reaction$.asObservable();
 
   constructor(private auth: AuthService, private zone: NgZone) {
     // ── Leaderboard connection ────────────────────────────────────────────
@@ -83,6 +87,7 @@ export class SignalrService implements OnDestroy {
     }));
 
     this.chatConnection.on('Presence', (p: Presence) => this.zone.run(() => this.presence$.next(p)));
+    this.chatConnection.on('Reaction', (r: Reaction) => this.zone.run(() => this.reaction$.next(r)));
     this.chatConnection.on('ScoreAnnounced', (a: ScoreAnnouncement) => this.zone.run(() => this.scoreAnnounced$.next(a)));
 
     this.chatConnection.on('ChatError', (error: string) => this.zone.run(() => {
@@ -110,7 +115,7 @@ export class SignalrService implements OnDestroy {
     // Delay start to allow auth state to initialise from localStorage
     setTimeout(() => {
       this.chatConnection.start()
-        .then(() => console.log('Chat SignalR connected'))
+        .then(() => { console.log('Chat SignalR connected'); this.zone.run(() => this.chatOnline$.next(true)); })
         .catch(err => console.error('Chat SignalR connection failed:', err));
     }, 100);
 
@@ -125,6 +130,12 @@ export class SignalrService implements OnDestroy {
     return this.chatConnection.invoke('SendMessage', message).then(() => true, () => false);
   }
 
+  react(toPlayer: string, emoji: string): void {
+    if (this.chatConnection.state === signalR.HubConnectionState.Connected) {
+      this.chatConnection.invoke('React', toPlayer, emoji).catch(() => {});
+    }
+  }
+
   deleteMessage(messageId: string): void {
     if (this.chatConnection.state === signalR.HubConnectionState.Connected) {
       this.chatConnection.invoke('DeleteMessage', messageId)
@@ -135,7 +146,7 @@ export class SignalrService implements OnDestroy {
   reconnectChat(): void {
     this.chatConnection.stop().then(() => {
       this.chatConnection.start()
-        .then(() => console.log('Chat SignalR reconnected with auth'))
+        .then(() => { console.log('Chat SignalR reconnected with auth'); this.zone.run(() => this.chatOnline$.next(true)); })
         .catch(err => console.error('Chat reconnect failed:', err));
     });
   }

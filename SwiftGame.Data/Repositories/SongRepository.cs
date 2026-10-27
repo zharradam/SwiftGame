@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SwiftGame.Data.Entities;
 
 namespace SwiftGame.Data.Repositories;
@@ -52,7 +52,8 @@ public class SongRepository : ISongRepository
     public async Task<IReadOnlyList<Song>> GetRandomSongsAsync(
         int count,
         List<Guid>? excludeIds = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        List<Guid>? albumIds = null)
     {
         // Only pick from songs belonging to included albums
         // Songs with no AlbumId (not yet linked) are included as a fallback
@@ -62,15 +63,15 @@ public class SongRepository : ISongRepository
             .Where(s => s.AlbumId == null ||                          // unlinked songs — include as fallback
                         s.AlbumRef!.IsIncluded);                      // or album is included
 
+        // Album mode: the player's chosen albums, whether or not the admin includes them by default
+        if (albumIds is { Count: > 0 })
+            query = _context.Songs
+                .Where(s => s.PreviewUrl != null && s.AlbumId != null && albumIds.Contains(s.AlbumId.Value))
+                .Where(s => excludeIds == null || !excludeIds.Contains(s.Id));
+
         var allIds = await query
             .Select(s => new { s.Id, s.Title })
             .ToListAsync(cancellationToken);
-
-        // Normalise title by stripping common version suffixes
-        static string NormaliseTitle(string title) => System.Text.RegularExpressions.Regex
-            .Replace(title, @"\s*[\(\[].*?[\)\]]", "")
-            .Trim()
-            .ToLowerInvariant();
 
         // Shuffle first then pick one song per normalised title
         var unique = allIds
@@ -84,4 +85,25 @@ public class SongRepository : ISongRepository
             .Where(s => unique.Contains(s.Id))
             .ToListAsync(cancellationToken);
     }
+
+    public Task<Song?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        => _context.Songs.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+
+    public async Task<IReadOnlyList<Guid>> GetPlayablePoolAsync(CancellationToken cancellationToken = default)
+    {
+        var all = await _context.Songs
+            .Where(s => s.PreviewUrl != null)
+            .Where(s => s.AlbumId == null || s.AlbumRef!.IsIncluded)
+            .OrderBy(s => s.Id)
+            .Select(s => new { s.Id, s.Title })
+            .ToListAsync(cancellationToken);
+
+        return all.GroupBy(s => NormaliseTitle(s.Title)).Select(g => g.First().Id).ToList();
+    }
+
+    // Strip "(Taylor's Version)", "[From The Vault]" etc. so versions of one song count once
+    public static string NormaliseTitle(string title) => System.Text.RegularExpressions.Regex
+        .Replace(title, @"\s*[\(\[].*?[\)\]]", "")
+        .Trim()
+        .ToLowerInvariant();
 }

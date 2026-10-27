@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SwiftGame.API.Services;
 using SwiftGame.Data.Repositories;
 
 namespace SwiftGame.API.Controllers;
@@ -7,9 +8,12 @@ namespace SwiftGame.API.Controllers;
 [Route("api/[controller]")]
 public class LeaderboardController(IGameSessionRepository sessions) : ControllerBase
 {
-    // period: "all" (default) or "today" (UTC day)
+    // period: "all" (default), "today" (local day, all ranked games) or "daily" (today's Daily Swiftle)
     private static DateTime? Since(string? period)
-        => period == "today" ? DateTime.UtcNow.Date : null;
+        => period is "today" or "daily" ? Clock.TodayStartUtc : null;
+
+    private static string[] Modes(string? period)
+        => period == "daily" ? ["daily"] : GameController.RankedModes;
 
     [HttpGet("top")]
     public async Task<IActionResult> GetTopScores(
@@ -17,7 +21,7 @@ public class LeaderboardController(IGameSessionRepository sessions) : Controller
         [FromQuery] string? period = null,
         CancellationToken cancellationToken = default)
     {
-        var top = await sessions.GetTopSessionsAsync(count, Since(period), cancellationToken);
+        var top = await sessions.GetTopSessionsAsync(Math.Clamp(count, 1, 50), Since(period), Modes(period), cancellationToken);
         return Ok(top.Select(ToEntry));
     }
 
@@ -29,10 +33,10 @@ public class LeaderboardController(IGameSessionRepository sessions) : Controller
     {
         if (playerId == Guid.Empty) return NoContent();
 
-        var best = await sessions.GetBestSessionAsync(playerId, Since(period), cancellationToken);
+        var best = await sessions.GetBestSessionAsync(playerId, Since(period), Modes(period), cancellationToken);
         if (best is null) return NoContent();
 
-        var rank = await sessions.GetSessionRankAsync(best.Id, Since(period), cancellationToken);
+        var rank = await sessions.GetSessionRankAsync(best.Id, Since(period), Modes(period), cancellationToken);
         return Ok(new { rank, entry = ToEntry(best) });
     }
 
@@ -40,6 +44,8 @@ public class LeaderboardController(IGameSessionRepository sessions) : Controller
     {
         id = s.Id,
         playerName = s.Player.Username,
+        avatar = s.Player.Avatar,
+        era = s.Player.FavouriteEra,
         songTitle = s.Scores
             .OrderByDescending(sc => sc.PointsEarned)
             .FirstOrDefault()?.Song.Title ?? "Unknown",

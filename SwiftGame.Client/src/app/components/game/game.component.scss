@@ -112,7 +112,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff69b4 0%, #c850c0 50%, #8a2be2 100%);
+  background: linear-gradient(135deg, var(--skin-1) 0%, color-mix(in srgb, var(--skin-1) 50%, var(--skin-2)) 50%, var(--skin-2) 100%);
   border: none;
   border-radius: 50px;
   color: #fff;
@@ -154,7 +154,7 @@
     font-size: 2.2rem;
     font-weight: 800;
     letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #ff69b4 0%, #ffd700 50%, #ff69b4 100%);
+    background: linear-gradient(135deg, var(--skin-1) 0%, #ffd700 50%, var(--skin-1) 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -583,7 +583,7 @@
     font-weight: 800;
     line-height: 1;
     margin: 0.5rem 0 0;
-    background: linear-gradient(135deg, #ff69b4 0%, #ffd700 50%, #ff69b4 100%);
+    background: linear-gradient(135deg, var(--skin-1) 0%, #ffd700 50%, var(--skin-1) 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -1103,3 +1103,59 @@
   margin-top: 0.4rem;
   font-size: 0.8rem;
 }
+
+// ── Modes ─────────────────────────────────────────────────────────────────────
+.modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: -0.5rem;
+}
+@media (max-width: 520px) { .modes { grid-template-columns: 1fr; } }
+
+.mode-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem;
+  text-align: left; padding: 0.8rem 0.9rem; min-height: 44px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px; color: #fff; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  &:hover:not(:disabled), &.open { border-color: var(--skin-1); background: color-mix(in srgb, var(--skin-1) 10%, transparent); }
+  &:disabled { opacity: 0.6; cursor: default; }
+  &:focus-visible { outline: 2px solid #f0abfc; outline-offset: 2px; }
+}
+.mode-name { font-weight: 800; font-size: 0.95rem; }
+.mode-sub { font-size: 0.75rem; color: rgba(255, 255, 255, 0.72); }
+.mode-badge { font-size: 0.72rem; font-weight: 700; color: #ffd166; margin-top: 0.15rem; }
+.modes-note { font-size: 0.72rem; color: rgba(255, 255, 255, 0.6); margin: -1.25rem 0 0; }
+
+.album-picker {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  padding: 1rem; border-radius: 14px; background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1); margin-top: -1rem;
+  &__title { margin: 0; font-weight: 700; font-size: 0.9rem; }
+  &__eras { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; }
+  &__loading { color: rgba(255, 255, 255, 0.6); font-size: 0.8rem; }
+}
+.era-pick {
+  border: 1.5px solid color-mix(in srgb, var(--c) 60%, transparent);
+  background: transparent; color: var(--c);
+  border-radius: 999px; padding: 0.35rem 0.8rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; min-height: 36px;
+  &.on { background: var(--c); color: #1a0a2e; }
+  &:focus-visible { outline: 2px solid #f0abfc; outline-offset: 2px; }
+}
+
+.challenge-banner {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+  padding: 1rem; border-radius: 14px; text-align: center;
+  background: color-mix(in srgb, var(--skin-1) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--skin-1) 50%, transparent);
+  p { margin: 0; font-size: 0.95rem; }
+}
+
+.game-over-mode { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--skin-1); margin: 0; }
+.game-over-vs { font-size: 0.85rem; color: rgba(255, 255, 255, 0.72); margin: -0.4rem 0 0.6rem; }
+.easter-egg { font-size: 0.9rem; font-weight: 700; color: #f0abfc; margin: 0 0 0.4rem; }
+.new-bead { font-size: 0.85rem; color: #ffd166; margin: 0 0 0.3rem; }
+.new-bead--gold { font-weight: 800; }

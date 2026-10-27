@@ -12,12 +12,16 @@ public class GameSessionRepository : IGameSessionRepository
 
     public async Task<GameSession> CreateAsync(
         Guid playerId,
+        string mode = "classic",
+        Guid? challengeOf = null,
         CancellationToken cancellationToken = default)
     {
         var session = new GameSession
         {
             Id = Guid.NewGuid(),
             PlayerId = playerId,
+            Mode = mode,
+            ChallengeOf = challengeOf,
             StartedAt = DateTime.UtcNow,
             IsComplete = false
         };
@@ -53,8 +57,8 @@ public class GameSessionRepository : IGameSessionRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<GameSession>> GetTopSessionsAsync(int count = 10, DateTime? since = null, CancellationToken cancellationToken = default)
-        => await Completed(since)
+    public async Task<IReadOnlyList<GameSession>> GetTopSessionsAsync(int count = 10, DateTime? since = null, IReadOnlyCollection<string>? modes = null, CancellationToken cancellationToken = default)
+        => await Completed(since, modes)
             .Include(g => g.Player)
             .Include(g => g.Scores)
                 .ThenInclude(s => s.Song)
@@ -62,8 +66,8 @@ public class GameSessionRepository : IGameSessionRepository
             .Take(count)
             .ToListAsync(cancellationToken);
 
-    public async Task<GameSession?> GetBestSessionAsync(Guid playerId, DateTime? since = null, CancellationToken cancellationToken = default)
-        => await Completed(since)
+    public async Task<GameSession?> GetBestSessionAsync(Guid playerId, DateTime? since = null, IReadOnlyCollection<string>? modes = null, CancellationToken cancellationToken = default)
+        => await Completed(since, modes)
             .Include(g => g.Player)
             .Include(g => g.Scores)
                 .ThenInclude(s => s.Song)
@@ -71,22 +75,25 @@ public class GameSessionRepository : IGameSessionRepository
             .OrderByDescending(g => g.TotalPoints)
             .FirstOrDefaultAsync(cancellationToken);
 
-    private IQueryable<GameSession> Completed(DateTime? since)
-        => since is null
-            ? _context.GameSessions.Where(g => g.IsComplete)
-            : _context.GameSessions.Where(g => g.IsComplete && g.CompletedAt >= since);
+    private IQueryable<GameSession> Completed(DateTime? since, IReadOnlyCollection<string>? modes = null)
+    {
+        var q = _context.GameSessions.Where(g => g.IsComplete);
+        if (since is not null) q = q.Where(g => g.CompletedAt >= since);
+        if (modes is not null) q = q.Where(g => modes.Contains(g.Mode));
+        return q;
+    }
 
-    public Task<int> CountCompletedAsync(CancellationToken cancellationToken = default)
-        => _context.GameSessions.CountAsync(g => g.IsComplete, cancellationToken);
+    public Task<int> CountCompletedAsync(DateTime? since = null, IReadOnlyCollection<string>? modes = null, CancellationToken cancellationToken = default)
+        => Completed(since, modes).CountAsync(cancellationToken);
 
-    public async Task<int> GetSessionRankAsync(Guid sessionId, DateTime? since = null, CancellationToken cancellationToken = default)
+    public async Task<int> GetSessionRankAsync(Guid sessionId, DateTime? since = null, IReadOnlyCollection<string>? modes = null, CancellationToken cancellationToken = default)
     {
         var session = await _context.GameSessions
             .FirstOrDefaultAsync(g => g.Id == sessionId, cancellationToken);
 
         if (session is null) return -1;
 
-        return await Completed(since)
+        return await Completed(since, modes)
             .Where(g => g.TotalPoints > session.TotalPoints)
             .CountAsync(cancellationToken) + 1;
     }

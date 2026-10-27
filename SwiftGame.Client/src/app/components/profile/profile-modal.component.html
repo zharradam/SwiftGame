@@ -1,0 +1,73 @@
+<div class="profile-overlay" (click)="cancel()">
+  <div class="profile" role="dialog" aria-modal="true" aria-labelledby="profile-title" (click)="$event.stopPropagation()">
+
+    <div class="profile-head">
+      <span class="profile-avatar" aria-hidden="true">{{ avatar || '🎵' }}</span>
+      <div>
+        <h2 id="profile-title" [style.color]="era ? eraColor(era) : null">{{ auth.username() }}</h2>
+        @if (progress) {
+          <p class="profile-level">{{ level.title }} era · {{ progress.totalPoints | number }} pts · {{ progress.games }} {{ progress.games === 1 ? 'game' : 'games' }}</p>
+        }
+      </div>
+      <button class="profile-close" (click)="cancel()" aria-label="Close">✕</button>
+    </div>
+
+    @if (error) { <p class="profile-error" role="alert">{{ error }}</p> }
+
+    @if (progress) {
+      <section>
+        @if (level.next) {
+          <div class="xp" role="progressbar" [attr.aria-valuenow]="level.progress * 100 | number:'1.0-0'" aria-valuemin="0" aria-valuemax="100"
+               [attr.aria-label]="'Progress to ' + level.next.title + ' era'">
+            <span class="xp-fill" [style.width.%]="level.progress * 100"></span>
+          </div>
+          <p class="hint">{{ (level.next.at - progress.totalPoints) | number }} pts to <strong>{{ level.next.title }} era</strong></p>
+        } @else {
+          <p class="hint">You've reached the top. Mastermind. 🧠</p>
+        }
+        @if (progress.streak > 0) { <p class="hint">🔥 {{ progress.streak }}-day Daily Swiftle streak</p> }
+      </section>
+
+      <section>
+        <h3>Friendship bracelet <span class="count">{{ beadsEarned }}/{{ progress.beads.length }}</span></h3>
+        <p class="hint">Get {{ progress.beadAt }} songs right from an era to earn its bead. Gold beads are for perfect games.</p>
+        <div class="bracelet">
+          @for (b of progress.beads; track b.key) {
+            <span class="bead" [class.earned]="b.earned" [style.--c]="eraColor(b.key)"
+                  [title]="b.label + ': ' + (b.earned ? 'earned' : b.correct + ' of ' + progress.beadAt)">
+              <span class="bead-label">{{ short(b.key) }}</span>
+            </span>
+          }
+          @for (g of goldList; track $index) {
+            <span class="bead earned gold" title="Perfect game"></span>
+          }
+        </div>
+      </section>
+    }
+
+    <section>
+      <h3>Avatar</h3>
+      <div class="avatars" role="radiogroup" aria-label="Avatar">
+        @for (a of avatars; track a) {
+          <button class="avatar-pick" role="radio" [attr.aria-checked]="avatar === a" [class.on]="avatar === a" (click)="avatar = a">{{ a }}</button>
+        }
+      </div>
+    </section>
+
+    <section>
+      <h3>Favourite era</h3>
+      <p class="hint">Colours your name on the leaderboard and gives the whole app that era's look.</p>
+      <div class="eras" role="radiogroup" aria-label="Favourite era">
+        <button class="era-pick" role="radio" [attr.aria-checked]="!era" [class.on]="!era" style="--c:#ff69b4" (click)="pickEra(null)">Classic pink</button>
+        @for (e of eras; track e.key) {
+          <button class="era-pick" role="radio" [attr.aria-checked]="era === e.key" [class.on]="era === e.key" [style.--c]="e.color" (click)="pickEra(e.key)">{{ e.label }}</button>
+        }
+      </div>
+    </section>
+
+    <div class="profile-actions">
+      <button class="btn-save" (click)="save()" [disabled]="saving">{{ saving ? 'Saving…' : 'Save' }}</button>
+      <button class="btn-cancel" (click)="cancel()">Cancel</button>
+    </div>
+  </div>
+</div>

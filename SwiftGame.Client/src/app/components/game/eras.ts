@@ -16,6 +16,12 @@ const ERAS: Array<Era & { match: RegExp }> = [
   { key: 'debut',     label: 'Taylor Swift',                  color: '#8fd9b6', square: '🟩', match: /^taylor swift/i },
 ];
 
+export const ALL_ERAS: Era[] = ERAS.map(({ match, ...e }) => e);
+
+export function eraByKey(key: string | null | undefined): Era | null {
+  return ALL_ERAS.find(e => e.key === key) ?? null;
+}
+
 const FALLBACK: Era = { key: 'swift', label: '', color: '#ff69b4', square: '🟪' };
 
 export function eraFor(album: string | undefined | null): Era {

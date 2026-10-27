@@ -26,6 +26,21 @@ public class ChatHub(IChatService chatService, IAuditService audit) : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
+    private static readonly string[] Reactions = ["🔥", "💜", "👏", "😱", "🫶"];
+    private static readonly ConcurrentDictionary<string, DateTime> LastReaction = new();
+
+    // Logged-in players can react to someone's announced score with one of a few emoji
+    public async Task React(string toPlayer, string emoji)
+    {
+        var from = Context.User?.FindFirstValue("username");
+        if (from is null || Context.User?.FindFirstValue("isBanned") == "true") return;
+        if (!Reactions.Contains(emoji) || string.IsNullOrWhiteSpace(toPlayer) || toPlayer.Length > 50) return;
+        if (LastReaction.TryGetValue(from, out var last) && DateTime.UtcNow - last < TimeSpan.FromSeconds(2)) return;
+        LastReaction[from] = DateTime.UtcNow;
+
+        await Clients.All.SendAsync("Reaction", new { from, to = toPlayer, emoji });
+    }
+
     private Task BroadcastPresence()
     {
         var names = Online.Values.Where(n => n is not null).Distinct().OrderBy(n => n).ToList();

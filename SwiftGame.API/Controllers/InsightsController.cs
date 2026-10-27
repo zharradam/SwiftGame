@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SwiftGame.API.Services;
 using SwiftGame.Data;
 
 namespace SwiftGame.API.Controllers;
@@ -13,13 +14,7 @@ public class InsightsController(SwiftGameDbContext db) : ControllerBase
 {
     private bool IsAdmin => User.FindFirst("isAdmin")?.Value == "true";
 
-    // Reports are in the owner's local time
-    private static readonly TimeZoneInfo Zone =
-        TimeZoneInfo.TryFindSystemTimeZoneById("Australia/Adelaide", out var tz) ? tz
-        : TimeZoneInfo.TryFindSystemTimeZoneById("Cen. Australia Standard Time", out tz) ? tz
-        : TimeZoneInfo.Utc;
-
-    private static DateTime Local(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), Zone);
+    private static DateTime Local(DateTime utc) => Clock.Local(utc);
 
     // ── GET /api/admin/audit ──────────────────────────────────────────────────
 
@@ -57,8 +52,19 @@ public class InsightsController(SwiftGameDbContext db) : ControllerBase
         var from = days > 0 ? now.AddDays(-days) : first;
         var prevFrom = days > 0 ? from.AddDays(-days) : (DateTime?)null;
 
+        // Stats are about other people: drop admins, and any browser an admin has ever used
+        var admins = await db.Players.Where(p => p.IsAdmin).Select(p => new { p.Id, p.Username }).ToListAsync(ct);
+        var adminIds = admins.Select(a => (Guid?)a.Id).ToList();
+        var adminNames = admins.Select(a => a.Username).ToList();
+        var adminVisitors = await db.AuditEvents.AsNoTracking()
+            .Where(e => e.VisitorId != null && (adminIds.Contains(e.PlayerId) || (e.PlayerName != null && adminNames.Contains(e.PlayerName))))
+            .Select(e => e.VisitorId).Distinct().ToListAsync(ct);
+
         var events = await db.AuditEvents.AsNoTracking()
             .Where(e => e.At >= (prevFrom ?? from))
+            .Where(e => !adminIds.Contains(e.PlayerId))
+            .Where(e => e.PlayerName == null || !adminNames.Contains(e.PlayerName))
+            .Where(e => e.VisitorId == null || !adminVisitors.Contains(e.VisitorId))
             .Select(e => new { e.At, e.Type, e.PlayerName, e.VisitorId, e.Source, e.Device })
             .ToListAsync(ct);
 
@@ -116,7 +122,8 @@ public class InsightsController(SwiftGameDbContext db) : ControllerBase
             .OrderByDescending(x => x.count).Take(10).ToList();
 
         // Song difficulty from the scores themselves (covers games before auditing existed)
-        var scoreQ = db.Scores.AsNoTracking().Where(s => s.PlayedAt >= from);
+        var adminGuids = admins.Select(a => a.Id).ToList();
+        var scoreQ = db.Scores.AsNoTracking().Where(s => s.PlayedAt >= from && !adminGuids.Contains(s.PlayerId));
         var hardest = await scoreQ
             .GroupBy(s => new { s.Song.Title, s.Song.Album })
             .Select(g => new { g.Key.Title, g.Key.Album, plays = g.Count(), misses = g.Count(s => !s.IsCorrect) })

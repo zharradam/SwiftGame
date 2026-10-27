@@ -8,4 +8,5 @@ public class SubmitAnswerResponse
     public int ResponseTimeMs { get; set; }
     public string Album { get; set; } = string.Empty;
     public string AlbumArt { get; set; } = string.Empty;
+    public string? CorrectEra { get; set; }
 }

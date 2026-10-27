@@ -1,4 +1,4 @@
-﻿namespace SwiftGame.API.Models.Auth;
+namespace SwiftGame.API.Models.Auth;
 
 // ── Requests ──────────────────────────────────────────────────────────────────
 
@@ -30,4 +30,6 @@ public record UserDto(
     Guid Id,
     string Username,
     string Email
-);
+,
+    string? Avatar = null,
+    string? FavouriteEra = null);

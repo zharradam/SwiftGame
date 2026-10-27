@@ -39,6 +39,35 @@
   font-size: 0.85rem;
   color: #c084fc;
   font-weight: 600;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  min-height: 36px;
+  cursor: pointer;
+  &:hover { border-color: rgba(232, 121, 249, 0.35); }
+  &:focus-visible { outline: 2px solid #f0abfc; outline-offset: 2px; }
+}
+
+.reaction-toast {
+  position: fixed;
+  top: 4.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(20, 10, 36, 0.95);
+  border: 1px solid var(--skin-1);
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  animation: toastDrop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes toastDrop {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .btn-ghost {
@@ -59,7 +88,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff69b4 0%, #c850c0 50%, #8a2be2 100%);
+  background: linear-gradient(135deg, var(--skin-1) 0%, color-mix(in srgb, var(--skin-1) 50%, var(--skin-2)) 50%, var(--skin-2) 100%);
   border: none;
   color: #fff;
   padding: 0.35rem 0.9rem;
