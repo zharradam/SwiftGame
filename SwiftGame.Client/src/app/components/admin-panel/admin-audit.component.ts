@@ -38,7 +38,7 @@ export const EVENT_LABELS: Record<string, string> = {
           <span class="audit-detail">
             @if (r.type === 'visit') { from {{ r.source }} · {{ r.device }} } @else { {{ r.detail }} }
           </span>
-          <time class="audit-when" [attr.datetime]="r.at" [title]="r.at + 'Z' | date:'medium'">{{ ago(r.at) }}</time>
+          <time class="audit-when" [attr.datetime]="r.at" [title]="utc(r.at) | date:'medium'">{{ ago(r.at) }}</time>
         </div>
       } @empty {
         @if (!loading) { <p class="admin-loading">Nothing recorded yet.</p> }
@@ -63,6 +63,9 @@ export class AdminAuditComponent implements OnInit {
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void { this.load(); }
+
+  // SQL Server sends times without a zone, PostgreSQL sends them with one; both are UTC
+  utc(at: string): Date { return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(at) ? at : at + 'Z'); }
 
   label(t: string): string { return EVENT_LABELS[t] ?? t; }
 
@@ -89,11 +92,11 @@ export class AdminAuditComponent implements OnInit {
   }
 
   ago(at: string): string {
-    const s = Math.max(0, (Date.now() - new Date(at + 'Z').getTime()) / 1000);
+    const s = Math.max(0, (Date.now() - this.utc(at).getTime()) / 1000);
     if (s < 60) return 'just now';
     if (s < 3600) return `${Math.floor(s / 60)} min ago`;
     if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
     if (s < 86400 * 7) return `${Math.floor(s / 86400)} d ago`;
-    return new Date(at + 'Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return this.utc(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   }
 }
