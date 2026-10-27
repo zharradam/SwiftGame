@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using SwiftGame.API.Hubs;
@@ -183,8 +183,7 @@ public class GameController : ControllerBase
         var rank = await _gameSessionRepository.GetSessionRankAsync(
             request.SessionId, cancellationToken);
 
-        var totalSessions = await _gameSessionRepository.GetTopSessionsAsync(
-            int.MaxValue, cancellationToken);
+        var totalSessions = await _gameSessionRepository.CountCompletedAsync(cancellationToken);
 
         await _hubContext.Clients.Group("leaderboard")
             .SendAsync("LeaderboardUpdated", cancellationToken);
@@ -194,7 +193,7 @@ public class GameController : ControllerBase
             var playerName = session.Player?.Username ?? "Guest";
             var points = session.TotalPoints;
 
-            var systemMsg = _chatService.AddMessage(
+            var systemMsg = await _chatService.AddMessageAsync(
                 "", $"🎵 {playerName} just scored {points:N0} points!", false, isSystem: true);
 
             await _chatContext.Clients.All.SendAsync("ReceiveMessage", systemMsg);
@@ -203,7 +202,7 @@ public class GameController : ControllerBase
         return Ok(new
         {
             Rank = rank,
-            TotalPlayers = totalSessions.Count
+            TotalPlayers = totalSessions
         });
     }
 

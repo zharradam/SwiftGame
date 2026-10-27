@@ -8,7 +8,7 @@ public class ChatHub(IChatService chatService) : Hub
 {
     public override async Task OnConnectedAsync()
     {
-        var history = chatService.GetRecentMessages();
+        var history = await chatService.GetRecentMessagesAsync();
         await Clients.Caller.SendAsync("ChatHistory", history);
         await base.OnConnectedAsync();
     }
@@ -40,7 +40,7 @@ public class ChatHub(IChatService chatService) : Hub
             return;
         }
 
-        var chatMessage = chatService.AddMessage(display, filtered, isGuest);
+        var chatMessage = await chatService.AddMessageAsync(display, filtered, isGuest);
         await Clients.All.SendAsync("ReceiveMessage", chatMessage);
     }
 
@@ -55,13 +55,13 @@ public class ChatHub(IChatService chatService) : Hub
             return;
         }
 
-        chatService.DeleteMessage(messageId);
+        await chatService.DeleteMessageAsync(messageId);
         await Clients.All.SendAsync("MessageDeleted", messageId);
     }
 
     public async Task BroadcastSystemMessage(string message)
     {
-        var chatMessage = chatService.AddMessage("", message, false, isSystem: true);
+        var chatMessage = await chatService.AddMessageAsync("", message, false, isSystem: true);
         await Clients.All.SendAsync("ReceiveMessage", chatMessage);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SwiftGame.Data.Entities;
 
 namespace SwiftGame.Data;
@@ -14,11 +14,22 @@ public class SwiftGameDbContext : DbContext
     public DbSet<Score> Scores { get; set; }
     public DbSet<Song> Songs { get; set; }
     public DbSet<GameSession> GameSessions { get; set; }
-    public DbSet<Album> Albums { get; set; }   // 👈 new
+    public DbSet<Album> Albums { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // ── ChatMessage ───────────────────────────────────────────────────────
+        modelBuilder.Entity<ChatMessage>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+            entity.Property(m => m.Id).HasMaxLength(36);
+            entity.Property(m => m.Username).IsRequired().HasMaxLength(50);
+            entity.Property(m => m.Message).IsRequired().HasMaxLength(200);
+            entity.HasIndex(m => m.Timestamp);
+        });
 
         // ── Player ────────────────────────────────────────────────────────────
         modelBuilder.Entity<Player>(entity =>

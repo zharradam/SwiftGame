@@ -57,10 +57,10 @@ public class AdminController(
         player.IsBanned = true;
         await players.UpdateAsync(player);
 
-        chatService.DeleteMessagesByUser(player.Username);
+        await chatService.DeleteMessagesByUserAsync(player.Username);
 
         await chatHub.Clients.All.SendAsync("PlayerBanned", player.Username);
-        await chatHub.Clients.All.SendAsync("ChatHistory", chatService.GetRecentMessages());
+        await chatHub.Clients.All.SendAsync("ChatHistory", await chatService.GetRecentMessagesAsync());
 
         return Ok(new { message = $"{player.Username} has been banned." });
     }
@@ -107,7 +107,7 @@ public class AdminController(
     {
         if (!CanModerate) return Forbid();
 
-        chatService.DeleteMessage(messageId);
+        await chatService.DeleteMessageAsync(messageId);
         await chatHub.Clients.All.SendAsync("MessageDeleted", messageId);
 
         return NoContent();

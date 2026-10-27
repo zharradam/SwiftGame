@@ -21,7 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Controllers & API explorer ────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IJwtService, JwtService>();
-builder.Services.AddSingleton<IChatService, ChatService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.Configure<GameSettings>(

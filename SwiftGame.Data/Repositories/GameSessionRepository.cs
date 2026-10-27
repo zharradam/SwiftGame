@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SwiftGame.Data.Entities;
 
 namespace SwiftGame.Data.Repositories;
@@ -62,6 +62,9 @@ public class GameSessionRepository : IGameSessionRepository
             .OrderByDescending(g => g.TotalPoints)
             .Take(count == int.MaxValue ? int.MaxValue : count)
             .ToListAsync(cancellationToken);
+
+    public Task<int> CountCompletedAsync(CancellationToken cancellationToken = default)
+        => _context.GameSessions.CountAsync(g => g.IsComplete, cancellationToken);
 
     public async Task<int> GetSessionRankAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {

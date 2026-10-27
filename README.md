@@ -43,7 +43,7 @@ A real-time multiplayer Taylor Swift song guessing game built with Angular and A
 **Database & Storage**
 - PostgreSQL (Neon) — production
 - SQL Server — development
-- Azure Blob Storage — game images
+- Game images bundled with the client (served by GitHub Pages)
 
 **Music**
 - iTunes Search API — song catalogue and previews

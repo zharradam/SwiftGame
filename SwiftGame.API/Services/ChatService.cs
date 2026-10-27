@@ -1,97 +1,88 @@
-﻿using System.Collections.Concurrent;
-using SwiftGame.API.Models.Chat;
+using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
+using SwiftGame.Data;
+using SwiftGame.Data.Entities;
 
 namespace SwiftGame.API.Services;
 
 public interface IChatService
 {
-    IReadOnlyList<ChatMessage> GetRecentMessages();
+    Task<IReadOnlyList<ChatMessage>> GetRecentMessagesAsync();
     (bool allowed, string filtered) ProcessMessage(string username, string message, bool isGuest, bool isBanned);
-    ChatMessage AddMessage(string username, string message, bool isGuest, bool isSystem = false);
+    Task<ChatMessage> AddMessageAsync(string username, string message, bool isGuest, bool isSystem = false);
     bool IsRateLimited(string username);
-    void DeleteMessage(string messageId);
-    void DeleteMessagesByUser(string username);
-    void ClearMessages();
+    Task DeleteMessageAsync(string messageId);
+    Task DeleteMessagesByUserAsync(string username);
 }
 
-public class ChatService : IChatService
+// Scoped (one DbContext per request); rate-limit and profanity state are static so they survive across scopes.
+public class ChatService(SwiftGameDbContext db) : IChatService
 {
     private const int MaxMessages = 100;
     private const int MaxMessageLength = 200;
 
-    private readonly ConcurrentQueue<ChatMessage> _messages = new();
-    private readonly ConcurrentDictionary<string, DateTime> _lastMessageTime = new();
-    private readonly ProfanityFilter.ProfanityFilter _profanityFilter = new();
+    private static readonly ConcurrentDictionary<string, DateTime> LastMessageTime = new();
+    private static readonly ProfanityFilter.ProfanityFilter Profanity = new();
 
-    public IReadOnlyList<ChatMessage> GetRecentMessages()
-        => _messages.ToArray();
+    public async Task<IReadOnlyList<ChatMessage>> GetRecentMessagesAsync()
+    {
+        var newest = await db.ChatMessages
+            .OrderByDescending(m => m.Timestamp)
+            .Take(MaxMessages)
+            .ToListAsync();
+        newest.Reverse();
+        return newest;
+    }
 
     public bool IsRateLimited(string username)
     {
-        if (_lastMessageTime.TryGetValue(username, out var lastTime))
-        {
-            if (DateTime.UtcNow - lastTime < TimeSpan.FromSeconds(1))
-                return true;
-        }
-        _lastMessageTime[username] = DateTime.UtcNow;
+        if (LastMessageTime.TryGetValue(username, out var lastTime) &&
+            DateTime.UtcNow - lastTime < TimeSpan.FromSeconds(1))
+            return true;
+
+        LastMessageTime[username] = DateTime.UtcNow;
         return false;
     }
 
     public (bool allowed, string filtered) ProcessMessage(
         string username, string message, bool isGuest, bool isBanned)
     {
-        if (isGuest) return (false, string.Empty);
-        if (isBanned) return (false, string.Empty);
-
-        if (string.IsNullOrWhiteSpace(message))
+        if (isGuest || isBanned || string.IsNullOrWhiteSpace(message))
             return (false, string.Empty);
 
         var trimmed = message.Trim();
         if (trimmed.Length > MaxMessageLength)
             trimmed = trimmed[..MaxMessageLength];
 
-        var filtered = _profanityFilter.CensorString(trimmed, '*');
-        return (true, filtered);
+        return (true, Profanity.CensorString(trimmed, '*'));
     }
 
-    public ChatMessage AddMessage(string username, string message, bool isGuest, bool isSystem = false)
+    public async Task<ChatMessage> AddMessageAsync(string username, string message, bool isGuest, bool isSystem = false)
     {
         var chatMessage = new ChatMessage
         {
-            Id = Guid.NewGuid().ToString(),
             Username = username,
             Message = message,
             IsGuest = isGuest,
             IsSystem = isSystem,
-            Timestamp = DateTime.UtcNow.ToString("O")
+            Timestamp = DateTime.UtcNow
         };
 
-        _messages.Enqueue(chatMessage);
+        db.ChatMessages.Add(chatMessage);
+        await db.SaveChangesAsync();
 
-        while (_messages.Count > MaxMessages)
-            _messages.TryDequeue(out _);
+        // Keep only the newest MaxMessages rows
+        await db.ChatMessages
+            .OrderByDescending(m => m.Timestamp)
+            .Skip(MaxMessages)
+            .ExecuteDeleteAsync();
 
         return chatMessage;
     }
 
-    public void DeleteMessage(string messageId)
-    {
-        var messages = _messages.ToArray();
-        while (_messages.TryDequeue(out _)) { }
-        foreach (var msg in messages.Where(m => m.Id != messageId))
-            _messages.Enqueue(msg);
-    }
+    public Task DeleteMessageAsync(string messageId) =>
+        db.ChatMessages.Where(m => m.Id == messageId).ExecuteDeleteAsync();
 
-    public void DeleteMessagesByUser(string username)
-    {
-        var messages = _messages.ToArray();
-        while (_messages.TryDequeue(out _)) { }
-        foreach (var msg in messages.Where(m => m.Username != username))
-            _messages.Enqueue(msg);
-    }
-
-    public void ClearMessages()
-    {
-        while (_messages.TryDequeue(out _)) { }
-    }
+    public Task DeleteMessagesByUserAsync(string username) =>
+        db.ChatMessages.Where(m => m.Username == username).ExecuteDeleteAsync();
 }
