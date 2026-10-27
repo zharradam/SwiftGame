@@ -58,14 +58,12 @@
       </p>
     </div>
 
-    <p class="start-error" role="alert" *ngIf="startError">{{ startError }}</p>
-    <button class="btn-primary btn-large" (click)="startGame()" [disabled]="gameStarted">
-      Play now
-    </button>
-    <p class="start-hint">🎵 Turn up your volume!</p>
-
-    <div class="modes">
-      <button class="mode-card" (click)="startGame('daily')" [disabled]="gameStarted || dailyDone">
+    <div class="modes" role="radiogroup" aria-label="Game mode">
+      <button class="mode-card" (click)="selectMode('classic')" [class.selected]="selectedMode === 'classic'" role="radio" [attr.aria-checked]="selectedMode === 'classic'" [disabled]="gameStarted">
+        <span class="mode-name">Normal</span>
+        <span class="mode-sub">10 random songs from every era</span>
+      </button>
+      <button class="mode-card" (click)="selectMode('daily')" [class.selected]="selectedMode === 'daily'" role="radio" [attr.aria-checked]="selectedMode === 'daily'" [disabled]="gameStarted || dailyDone">
         <span class="mode-name">Daily Swiftle</span>
         <span class="mode-sub">
           @if (dailyDone) { Done for today. Back tomorrow! }
@@ -73,18 +71,18 @@
         </span>
         @if (dailyStreak > 0) { <span class="mode-badge">🔥 {{ dailyStreak }}-day streak</span> }
       </button>
-      <button class="mode-card" (click)="openAlbumPicker()" [class.open]="showAlbumPicker" [disabled]="gameStarted">
+      <button class="mode-card" (click)="selectMode('album')" [class.selected]="selectedMode === 'album'" role="radio" [attr.aria-checked]="selectedMode === 'album'" [disabled]="gameStarted">
         <span class="mode-name">Album mode</span>
         <span class="mode-sub">Only songs from the eras you pick</span>
       </button>
-      <button class="mode-card" (click)="startGame('eras')" [disabled]="gameStarted">
+      <button class="mode-card" (click)="selectMode('eras')" [class.selected]="selectedMode === 'eras'" role="radio" [attr.aria-checked]="selectedMode === 'eras'" [disabled]="gameStarted">
         <span class="mode-name">Which album?</span>
         <span class="mode-sub">Name the era, not the song</span>
       </button>
     </div>
     <p class="modes-note">Album mode and Which album? are practice: they don't go on the leaderboard.</p>
 
-    @if (showAlbumPicker) {
+    @if (selectedMode === 'album') {
       <div class="album-picker">
         <p class="album-picker__title">Pick one or more eras</p>
         <div class="album-picker__eras">
@@ -93,11 +91,15 @@
                     [attr.aria-pressed]="pickedEras.has(e.key)" (click)="toggleEra(e.key)">{{ e.label }}</button>
           } @empty { <span class="album-picker__loading">Loading eras…</span> }
         </div>
-        <button class="btn-primary" (click)="startGame('album')" [disabled]="!pickedEras.size || gameStarted">
-          Play {{ pickedEras.size || '' }} {{ pickedEras.size === 1 ? 'era' : 'eras' }}
-        </button>
       </div>
     }
+
+    <p class="start-error" role="alert" *ngIf="startError">{{ startError }}</p>
+    <button class="btn-primary btn-large" (click)="startGame(selectedMode)" [disabled]="gameStarted || !canPlay">
+      {{ playLabel }}
+    </button>
+    <p class="start-hint">🎵 Turn up your volume!</p>
+
   </div>
 
   <!-- Game -->

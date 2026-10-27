@@ -330,7 +330,7 @@ onSignUpClick() { this.openRegister.emit(); }
   startGame(mode: GameMode = 'classic'): void {
     if (this.gameStarted) return;   // double-click guard
     if (mode === 'daily' && this.dailyDone) return;
-    if (mode === 'album' && !this.pickedEras.size) { this.showAlbumPicker = true; return; }
+    if (mode === 'album' && !this.pickedEras.size) return;
     this.mode     = mode;
     this.songSet  = null;
     this.setIndex = 0;
@@ -415,6 +415,7 @@ onSignUpClick() { this.openRegister.emit(); }
     this.shareState        = 'idle';
     this.showAllMissed     = false;
     this.state             = 'loading';
+    if (this.selectedMode === 'daily' || this.selectedMode === 'challenge') this.selectedMode = 'classic';
     this.paused            = false;
     this.slowStart         = false;
     this.stopCountdown();
@@ -818,6 +819,30 @@ onSignUpClick() { this.openRegister.emit(); }
 
   toggleEra(key: string): void {
     this.pickedEras.has(key) ? this.pickedEras.delete(key) : this.pickedEras.add(key);
+  }
+
+  // Cards choose the mode (Normal by default); Play now starts it.
+  selectedMode: GameMode = 'classic';
+
+  selectMode(mode: GameMode): void {
+    this.selectedMode = mode;
+    if (this.selectedMode === 'album' && !this.albums.length)
+      this.gameService.getAlbums().subscribe({ next: a => this.albums = a, error: () => {} });
+  }
+
+  get canPlay(): boolean {
+    if (this.selectedMode === 'daily') return !this.dailyDone;
+    if (this.selectedMode === 'album') return this.pickedEras.size > 0;
+    return true;
+  }
+
+  get playLabel(): string {
+    switch (this.selectedMode) {
+      case 'daily': return 'Play the Daily Swiftle';
+      case 'album': return this.pickedEras.size ? `Play ${this.pickedEras.size} ${this.pickedEras.size === 1 ? 'era' : 'eras'}` : 'Pick an era first';
+      case 'eras':  return 'Play Which album?';
+      default:      return 'Play now';
+    }
   }
 
   get pickableEras() {
