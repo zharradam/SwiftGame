@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameComponent } from './components/game/game.component';
 import { LeaderboardComponent } from './components/leaderboard/leaderboard.component';
@@ -21,8 +21,13 @@ export class AppComponent {
   showAuthModal = false;
   authModalMode: 'login' | 'register' = 'login';
   activeTab: Tab = 'game';
+  // Phone layout shows one panel at a time; wider layouts always show the game.
+  private phone = signal(window.matchMedia('(max-width: 767px)').matches);
+  get gameHidden(): boolean { return this.phone() && this.activeTab !== 'game'; }
 
-  constructor(readonly auth: AuthService) {}
+  constructor(readonly auth: AuthService) {
+    window.matchMedia('(max-width: 767px)').addEventListener('change', e => this.phone.set(e.matches));
+  }
 
   openLogin() {
     this.authModalMode = 'login';

@@ -21,6 +21,13 @@ export interface LeaderboardEntry {
   playedAt:      string;
 }
 
+export type LeaderboardPeriod = 'all' | 'today';
+
+export interface MyBest {
+  rank:  number;
+  entry: LeaderboardEntry;
+}
+
 export interface GameConfig {
   questionsPerGame: number;
   imageBaseUrl:     string;
@@ -41,6 +48,8 @@ export interface SubmitAnswerResponse {
   pointsEarned: number;
   correctTitle: string;
   responseTimeMs: number;
+  album: string;
+  albumArt: string;
 }
 
 export interface StartSessionResponse {
@@ -76,9 +85,16 @@ export class GameService {
     );
   }
 
-  getLeaderboard(count: number = 10): Observable<LeaderboardEntry[]> {
+  getLeaderboard(count: number = 10, period: LeaderboardPeriod = 'all'): Observable<LeaderboardEntry[]> {
     return this.http.get<LeaderboardEntry[]>(
-      `${this.apiUrl}/leaderboard/top?count=${count}`
+      `${this.apiUrl}/leaderboard/top?count=${count}&period=${period}`
+    );
+  }
+
+  // null when the player has no completed game in the period (204)
+  getMyBest(playerId: string, period: LeaderboardPeriod = 'all'): Observable<MyBest | null> {
+    return this.http.get<MyBest | null>(
+      `${this.apiUrl}/leaderboard/me?playerId=${playerId}&period=${period}`
     );
   }
 

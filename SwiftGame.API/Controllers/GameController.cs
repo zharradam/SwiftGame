@@ -25,7 +25,6 @@ public class GameController : ControllerBase
     private readonly GameSettings _gameSettings;
     private readonly IHubContext<LeaderboardHub> _hubContext;
     private readonly IHubContext<ChatHub> _chatContext;
-    private readonly IChatService _chatService;
 
     public GameController(
         IMusicProviderFactory factory,
@@ -34,8 +33,7 @@ public class GameController : ControllerBase
         IGameSessionRepository gameSessionRepository,
         IOptions<GameSettings> gameSettings,
         IHubContext<LeaderboardHub> hubContext,
-        IHubContext<ChatHub> chatHubContext,
-        IChatService chatService)
+        IHubContext<ChatHub> chatHubContext)
     {
         _previewResolver = factory.CreatePreviewResolver();
         _songRepository = songRepository;
@@ -44,7 +42,6 @@ public class GameController : ControllerBase
         _gameSettings = gameSettings.Value;
         _hubContext = hubContext;
         _chatContext = chatHubContext;
-        _chatService = chatService;
     }
 
     // ── GET api/game/config ───────────────────────────────────────────────────
@@ -146,7 +143,9 @@ public class GameController : ControllerBase
             IsCorrect = isCorrect,
             PointsEarned = pointsEarned,
             CorrectTitle = song.Title,
-            ResponseTimeMs = request.ResponseTimeMs
+            ResponseTimeMs = request.ResponseTimeMs,
+            Album = song.Album,
+            AlbumArt = song.AlbumArt
         });
     }
 
@@ -181,22 +180,18 @@ public class GameController : ControllerBase
         var session = await _gameSessionRepository.GetByIdAsync(request.SessionId, cancellationToken);
 
         var rank = await _gameSessionRepository.GetSessionRankAsync(
-            request.SessionId, cancellationToken);
+            request.SessionId, null, cancellationToken);
 
         var totalSessions = await _gameSessionRepository.CountCompletedAsync(cancellationToken);
 
         await _hubContext.Clients.Group("leaderboard")
             .SendAsync("LeaderboardUpdated", cancellationToken);
 
-        if (session is not null)
+        if (session is not null && session.PlayerId != Guid.Empty)
         {
-            var playerName = session.Player?.Username ?? "Guest";
-            var points = session.TotalPoints;
-
-            var systemMsg = await _chatService.AddMessageAsync(
-                "", $"🎵 {playerName} just scored {points:N0} points!", false, isSystem: true);
-
-            await _chatContext.Clients.All.SendAsync("ReceiveMessage", systemMsg);
+            await _chatContext.Clients.All.SendAsync("ScoreAnnounced",
+                new { playerName = session.Player.Username, points = session.TotalPoints, rank },
+                cancellationToken);
         }
 
         return Ok(new

@@ -15,19 +15,20 @@
         <span class="user-chip">👤 {{ auth.username() }}</span>
         <button class="btn-ghost" (click)="auth.logout()">Log out</button>
       } @else {
-        <button class="btn-ghost" (click)="openLogin()">Log In</button>
-        <button class="btn-primary" (click)="openRegister()">Sign Up</button>
+        <button class="btn-ghost" (click)="openLogin()">Log in</button>
+        <button class="btn-primary" (click)="openRegister()">Sign up</button>
       }
     </div>
   </header>
 
-  <!-- Desktop: three column layout -->
-  <div class="app-body">
+  <!-- One set of panels for every width. Phones show one at a time via data-tab; the game stays mounted. -->
+  <div class="app-body" [attr.data-tab]="activeTab">
     <aside class="app-sidebar">
       <swiftgame-leaderboard />
     </aside>
     <main class="app-main">
       <swiftgame-game
+        [hidden]="gameHidden"
         (openLogin)="openLogin()"
         (openRegister)="openRegister()" />
     </main>
@@ -36,39 +37,18 @@
     </aside>
   </div>
 
-  <!-- Mobile: tab panels — use *ngIf so only one instance exists at a time -->
-  <div class="app-mobile">
-    <div class="app-mobile__panel" [class.active]="activeTab === 'game'">
-      @if (activeTab === 'game') {
-        <swiftgame-game
-          (openLogin)="openLogin()"
-          (openRegister)="openRegister()" />
-      }
-    </div>
-    <div class="app-mobile__panel" [class.active]="activeTab === 'leaderboard'">
-      @if (activeTab === 'leaderboard') {
-        <swiftgame-leaderboard />
-      }
-    </div>
-    <div class="app-mobile__panel app-mobile__panel--chat" [class.active]="activeTab === 'chat'">
-      @if (activeTab === 'chat') {
-        <swiftgame-chat (openLogin)="openLogin()" />
-      }
-    </div>
-  </div>
-
-  <!-- Mobile: tab bar -->
-  <nav class="app-tabs">
-    <button class="app-tabs__tab" [class.active]="activeTab === 'game'" (click)="setTab('game')">
-      <span class="app-tabs__icon">🎵</span>
+  <!-- Phone tab bar -->
+  <nav class="app-tabs" aria-label="Sections">
+    <button class="app-tabs__tab" [class.active]="activeTab === 'game'" [attr.aria-current]="activeTab === 'game' ? 'page' : null" (click)="setTab('game')">
+      <span class="app-tabs__icon" aria-hidden="true">🎵</span>
       <span class="app-tabs__label">Game</span>
     </button>
-    <button class="app-tabs__tab" [class.active]="activeTab === 'leaderboard'" (click)="setTab('leaderboard')">
-      <span class="app-tabs__icon">🏆</span>
-      <span class="app-tabs__label">Scores</span>
+    <button class="app-tabs__tab" [class.active]="activeTab === 'leaderboard'" [attr.aria-current]="activeTab === 'leaderboard' ? 'page' : null" (click)="setTab('leaderboard')" aria-label="Leaderboard">
+      <span class="app-tabs__icon" aria-hidden="true">🏆</span>
+      <span class="app-tabs__label">Leaderboard</span>
     </button>
-    <button class="app-tabs__tab" [class.active]="activeTab === 'chat'" (click)="setTab('chat')">
-      <span class="app-tabs__icon">💬</span>
+    <button class="app-tabs__tab" [class.active]="activeTab === 'chat'" [attr.aria-current]="activeTab === 'chat' ? 'page' : null" (click)="setTab('chat')">
+      <span class="app-tabs__icon" aria-hidden="true">💬</span>
       <span class="app-tabs__label">Chat</span>
     </button>
   </nav>

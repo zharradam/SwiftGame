@@ -1,5 +1,6 @@
 import {
   Component,
+  HostListener,
   EventEmitter,
   Input,
   OnInit,
@@ -30,6 +31,8 @@ export class AuthModalComponent implements OnInit {
 
   ngOnInit() {
     this.mode = this.initialMode;
+    this.auth.clearError();
+    setTimeout(() => (document.querySelector('.auth-form input') as HTMLInputElement | null)?.focus());
   }
 
   submit() {
@@ -53,8 +56,11 @@ export class AuthModalComponent implements OnInit {
   }
 
   clearError() {
-    // Signals reset on next request; optionally expose a clearError() on AuthService
+    this.auth.clearError();
   }
+
+  @HostListener('document:keydown.escape')
+  onEscape() { this.close.emit(); }
 
   onOverlayClick(event: MouseEvent) {
     if ((event.target as HTMLElement).classList.contains('auth-overlay')) {

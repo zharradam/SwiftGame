@@ -7,7 +7,6 @@
 html {
   height: 100%;
   width: 100%;
-  overflow-y: scroll;
   background: #0d0a1a;
   -webkit-font-smoothing: antialiased;
 }
@@ -19,3 +18,18 @@ body {
   color: #fff;
   background: #0d0a1a;
 }
+:root {
+  --text-muted: rgba(255, 255, 255, 0.72);
+  --text-faint: rgba(255, 255, 255, 0.6);
+  --accent: #ff69b4;
+  --gold: #ffd166;
+}
+
+// Form controls don't inherit the body font by default
+button, input, textarea, select { font: inherit; }
+
+::selection { background: rgba(255, 105, 180, 0.35); color: #fff; }
+
+* { scrollbar-width: thin; scrollbar-color: rgba(232, 121, 249, 0.3) transparent; }
+
+input { caret-color: #f0abfc; }

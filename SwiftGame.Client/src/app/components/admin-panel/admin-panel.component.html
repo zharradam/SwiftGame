@@ -40,7 +40,7 @@
               <div class="admin-player__actions">
                 @if (!player.isAdmin) {
                   <button class="admin-btn" [class.active]="player.isModerator" (click)="toggleModerator(player)">
-                    {{ player.isModerator ? 'Remove Mod' : 'Make Mod' }}
+                    {{ player.isModerator ? 'Remove moderator' : 'Make moderator' }}
                   </button>
                   @if (!player.isBanned) {
                     <button class="admin-btn admin-btn--danger" (click)="ban(player)">Ban</button>
@@ -59,7 +59,7 @@
     @if (activeTab === 'albums') {
       <div class="admin-albums-toolbar">
         <span class="admin-albums-hint">{{ includedCount }} of {{ albums.length }} albums included in game</span>
-        <button class="admin-btn" (click)="seedAlbums()">Reseed from Songs</button>
+        <button class="admin-btn" (click)="seedAlbums()">Rebuild album list from songs</button>
       </div>
       <div class="admin-list">
         @for (album of albums; track album.id) {

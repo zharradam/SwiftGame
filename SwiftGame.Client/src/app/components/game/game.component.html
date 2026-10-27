@@ -1,10 +1,12 @@
-<div class="game-container">
+<div class="sr-only" aria-live="polite">{{ announcement }}</div>
+
+<div class="game-container" [style.--era]="currentEra?.color ?? null">
 
   <!-- Full screen countdown — shown before first question -->
   @if (state === 'countdown' && isCountingDown) {
     <div class="countdown-fullscreen">
       <div class="countdown-content">
-        <p class="countdown-label">First question in</p>
+        <p class="countdown-label">First song in</p>
         <div class="countdown-number" *ngIf="countdown > 0">{{ countdown }}</div>
       </div>
     </div>
@@ -12,7 +14,7 @@
 
   <!-- Start screen -->
   <div class="start-screen" *ngIf="!gameStarted || state === 'countdown'">
-    <div class="game-header hide-mobile">
+    <div class="game-header">
       <h1 class="game-title">{{ gameTitle }}</h1>
       <p class="game-subtitle">HOW WELL DO YOU KNOW TAYLOR SWIFT?</p>
     </div>
@@ -24,32 +26,34 @@
     <div class="start-details">
       <div class="start-stat">
         <span class="start-stat-value">{{ questionsPerGame }}</span>
-        <span class="start-stat-label">questions</span>
+        <span class="start-stat-label">songs</span>
       </div>
       <div class="start-stat-divider"></div>
       <div class="start-stat">
-        <span class="start-stat-value">100k</span>
-        <span class="start-stat-label">pts max</span>
+        <span class="start-stat-value">10s</span>
+        <span class="start-stat-label">to answer each</span>
       </div>
       <div class="start-stat-divider"></div>
       <div class="start-stat">
-        <span class="start-stat-value">4</span>
-        <span class="start-stat-label">choices</span>
+        <span class="start-stat-value">10,000</span>
+        <span class="start-stat-label">pts if you're instant</span>
       </div>
     </div>
+    <p class="start-rule">The faster you name the song, the more it's worth.</p>
 
     <div class="guest-prompt" *ngIf="!auth.isAuthenticated()">
-      <p>🎵 Playing as guest — scores won't be saved to your profile!</p>
       <p>
+        You're playing as <strong>Guest</strong>.
         <button class="btn-link" (click)="onSignUpClick()">Sign up free</button>
         or
         <button class="btn-link" (click)="onLoginClick()">log in</button>
-        to appear on the leaderboard.
+        to put your name on the board.
       </p>
     </div>
 
-    <button class="btn-primary btn-large" (click)="startGame()">
-      Play Now
+    <p class="start-error" role="alert" *ngIf="startError">{{ startError }}</p>
+    <button class="btn-primary btn-large" (click)="startGame()" [disabled]="gameStarted">
+      Play now
     </button>
     <p class="start-hint">🎵 Turn up your volume!</p>
   </div>
@@ -60,13 +64,16 @@
     <!-- Loading -->
     <div class="state-loading" *ngIf="state === 'loading'">
       <div class="spinner"></div>
-      <p>Loading round...</p>
+      <p>{{ slowStart ? 'Waking up the server. This can take up to 30 seconds.' : 'Loading round...' }}</p>
     </div>
 
     <!-- Error -->
     <div class="state-error" *ngIf="state === 'error'">
       <p>{{ errorMessage }}</p>
-      <button class="btn-primary" (click)="loadRound()">Try Again</button>
+      <div class="game-over-row">
+        <button class="btn-primary" (click)="continueAfterError()">Carry on</button>
+        <button class="btn-secondary" (click)="goHome()">Home</button>
+      </div>
     </div>
 
     <!-- Game over -->
@@ -77,19 +84,19 @@
               *ngIf="showFireworks">
       </canvas>
 
-      <div class="rank-badge"
+      <div class="rank-badge" *ngIf="playerRank > 0"
            [class.top1]="playerRank === 1"
            [class.top3]="playerRank > 1 && playerRank <= 3"
            [class.top10]="playerRank > 3 && playerRank <= 10">
         <span class="rank-number">#{{ playerRank }}</span>
-        <span class="rank-label">of {{ totalPlayers }} players</span>
+        <span class="rank-label">of {{ totalPlayers }} {{ totalPlayers === 1 ? 'game' : 'games' }}</span>
       </div>
 
-      <h2 class="game-over-title">{{ rankMessage }}</h2>
+      <h2 class="game-over-title" *ngIf="rankMessage">{{ rankMessage }}</h2>
 
       <p class="game-over-score">{{ totalScore | number }}</p>
-      <p class="game-over-label">TOTAL POINTS</p>
-      <p class="game-over-questions">{{ questionsPerGame }} questions answered</p>
+      <p class="game-over-label">Total points</p>
+
 
       <div class="game-over-stats">
         <div class="game-over-stat">
@@ -108,35 +115,77 @@
         </div>
       </div>
 
+      <p class="game-over-best" [class.is-best]="isNewBest" *ngIf="bestLine">{{ bestLine }}</p>
+      <p class="game-over-beat" *ngIf="beatPercent >= 25">You beat {{ beatPercent }}% of games played</p>
+
+      <div class="missed" *ngIf="missed.length">
+        <p class="missed-title">Songs you missed</p>
+        <ul class="missed-list">
+          <li *ngFor="let m of missed">
+            <span class="era-dot" [style.background]="era(m.album).color" aria-hidden="true"></span>
+            <span class="missed-song">{{ m.correctTitle }}</span>
+            <span class="missed-era" *ngIf="era(m.album).label" [style.color]="era(m.album).color">{{ era(m.album).label }}</span>
+          </li>
+        </ul>
+      </div>
+
       <div class="game-over-buttons">
         <button class="btn-primary btn-large" (click)="restartGame()">
-          Play Again
+          Play again
         </button>
-        <button class="btn-secondary" (click)="goHome()">
-          Home
-        </button>
+        <div class="game-over-row">
+          <button class="btn-secondary" (click)="share()">
+            {{ shareState === 'copied' ? 'Copied!' : shareState === 'shared' ? 'Shared' : 'Share score' }}
+          </button>
+          <button class="btn-secondary" (click)="goHome()">
+            Home
+          </button>
+        </div>
+        <p class="guest-save" *ngIf="!auth.isAuthenticated()">
+          This score was saved as "Guest". <button class="btn-link" (click)="onSignUpClick()">Sign up free</button> so your next one has your name
+        </p>
       </div>
     </div>
 
     <!-- Playing / Answered -->
     <ng-container *ngIf="(state === 'playing' || state === 'answered') && !gameOver">
 
-      <div class="game-header hide-mobile">
+      <div class="game-header game-header--round hide-mobile">
         <h1 class="game-title">{{ gameTitle }}</h1>
         <p class="game-subtitle">Guess the Taylor Swift song!</p>
       </div>
 
-      <div class="stage-image" *ngIf="currentImageUrl">
+      <div class="stage-image" *ngIf="currentImageUrl" [class.era-wash]="!!currentEra">
         <img [src]="currentImageUrl"
-          alt="Taylor Swift on stage"
+          alt=""
           class="stage-img"
-          [class.image-blurred]="state === 'answered'"
+          [class.image-blurred]="state === 'answered' && !result?.albumArt"
           (error)="currentImageUrl = ''"/>
+        @if (currentEra && result?.albumArt) {
+          <img class="album-art" [src]="artworkLarge(result!.albumArt)" [alt]="result!.album + ' album cover'" />
+        }
 
-          <div class="countdown-fullscreen" *ngIf="isCountingDown">
+          @if (needsTap && state === 'playing') {
+            @if (clipFailed) {
+              <div class="tap-to-play" role="alert">
+                This clip won't play.
+                <button class="btn-primary" (click)="skipClip()">Skip to the next song</button>
+              </div>
+            } @else {
+              <button class="tap-to-play" (click)="tapToPlay()">
+                <span class="tap-to-play__icon" aria-hidden="true">▶</span>
+                Tap to hear the clip
+              </button>
+            }
+          }
+          @if (paused) {
+            <div class="paused-overlay" role="status">Paused · come back to carry on</div>
+          }
+
+          <div class="countdown-fullscreen countdown-stage" *ngIf="isCountingDown">
             <div class="countdown-content">
               <p class="countdown-label">
-                {{ currentQuestion === 0 ? 'First question in' : currentQuestion === questionsPerGame - 1 ? 'Last question in' : 'Next question in' }}
+                {{ currentQuestion === 0 ? 'First song in' : currentQuestion === questionsPerGame - 1 ? 'Last song in' : 'Next song in' }}
               </p>
               <ng-container *ngIf="isCountingDown">
                 <ng-container *ngFor="let _ of [countdownKey]">
@@ -150,17 +199,22 @@
       </div>
 
       <div class="game-progress">
-        <span class="progress-text">Question {{ displayQuestion }} of {{ questionsPerGame }}</span>
-        <div class="progress-bar">
-          <div class="progress-fill"
-               [style.width.%]="(questionsAnswered / questionsPerGame) * 100">
-          </div>
+        <span class="progress-text">Song {{ displayQuestion }} of {{ questionsPerGame }}</span>
+        <div class="round-dots" role="img" [attr.aria-label]="roundDotsLabel">
+          <span class="round-dot"
+                *ngFor="let d of roundDots; let i = index"
+                [class.correct]="d === 'correct'"
+                [class.wrong]="d === 'wrong'"
+                [class.current]="d === 'pending' && i === currentQuestion - 1"
+                [style.background]="roundDotColor(i)"></span>
         </div>
+        <span class="streak-chip" *ngIf="streak >= 2">{{ streak }} in a row</span>
         <span class="progress-score">{{ totalScore | number }} pts</span>
+        <button class="quit-btn" (click)="quitGame()">Quit</button>
       </div>
 
       <div class="audio-row">
-        <div class="audio-indicator" *ngIf="state === 'playing'; else audioStopped">
+        <div class="audio-indicator" aria-hidden="true" *ngIf="state === 'playing'; else audioStopped">
           <div class="audio-bar"
               *ngFor="let h of barHeights; let i = index"
               [style.height.px]="h"
@@ -172,19 +226,22 @@
         </ng-template>
 
         <div class="timer" [class.stopped]="state === 'answered'" [class.danger]="remainingMs <= 3000 && state === 'playing'">
-          <span class="timer-value">{{ formatTime(remainingMs) }}</span>
+          <span class="timer-value">{{ pointsAtStake | number }}</span>
+          @if (state === 'playing') { <span class="timer-sub">pts · {{ formatTime(remainingMs) }} left</span> }
         </div>
       </div>
 
       <div class="choices" *ngIf="round">
         <button
-          *ngFor="let choice of round.choices"
+          *ngFor="let choice of round.choices; let i = index"
           class="choice-btn"
+          [attr.aria-keyshortcuts]="'' + (i + 1)"
+          [class.waiting]="needsTap"
           [class.correct]="getChoiceClass(choice) === 'correct'"
           [class.incorrect]="getChoiceClass(choice) === 'incorrect'"
           [disabled]="state === 'answered'"
           (click)="selectChoice(choice)">
-          {{ choice }}
+          <span class="choice-key" aria-hidden="true">{{ i + 1 }}</span>{{ choice }}
         </button>
       </div>
 
@@ -194,8 +251,9 @@
              [class.correct]="result.isCorrect"
              [class.incorrect]="!result.isCorrect">
           <div class="result-left">
-            <span class="result-title">{{ result.isCorrect ? 'Correct!' : 'Wrong!' }}</span>
+            <span class="result-status">{{ resultStatus }}</span>
             <span class="result-song">{{ result.correctTitle }}</span>
+            <span class="era-chip" *ngIf="era(result.album).label">{{ era(result.album).label }}</span>
           </div>
           <div class="result-right">
             <span class="result-points">+{{ result.pointsEarned | number }}</span>

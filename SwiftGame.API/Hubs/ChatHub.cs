@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
+using System.Collections.Concurrent;
 using SwiftGame.API.Services;
 using System.Security.Claims;
 
@@ -6,11 +7,29 @@ namespace SwiftGame.API.Hubs;
 
 public class ChatHub(IChatService chatService) : Hub
 {
+    // shortcut: in-process presence, fine for one server instance; move to a store if the API ever scales out
+    private static readonly ConcurrentDictionary<string, string?> Online = new();
+
     public override async Task OnConnectedAsync()
     {
+        Online[Context.ConnectionId] = Context.User?.FindFirstValue("username");
         var history = await chatService.GetRecentMessagesAsync();
         await Clients.Caller.SendAsync("ChatHistory", history);
+        await BroadcastPresence();
         await base.OnConnectedAsync();
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        Online.TryRemove(Context.ConnectionId, out _);
+        await BroadcastPresence();
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    private Task BroadcastPresence()
+    {
+        var names = Online.Values.Where(n => n is not null).Distinct().OrderBy(n => n).ToList();
+        return Clients.All.SendAsync("Presence", new { count = Online.Count, names });
     }
 
     public async Task SendMessage(string message)

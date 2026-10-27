@@ -22,8 +22,20 @@
       @if (auth.isAdmin()) {
         <button class="chat-admin-btn" (click)="showAdminPanel = true" title="Manage players">🛡️</button>
       }
-      <span class="chat-count">{{ messages.length }} messages</span>
+      <span class="chat-count">{{ chatCount }} {{ chatCount === 1 ? 'message' : 'messages' }}</span>
     </div>
+  </div>
+
+  <!-- Who's here + transient score announcements -->
+  <div class="chat-presence">
+    @if (!online) {
+      <span class="chat-reconnecting">Reconnecting to chat…</span>
+    } @else if (toast) {
+      <span class="chat-toast">🎵 {{ toast.playerName }} just scored {{ toast.points | number }} · #{{ toast.rank }}</span>
+    } @else {
+      <span class="chat-online"><span class="chat-online__dot"></span>{{ presence.count }} here</span>
+      @if (presenceLabel) { <span class="chat-names">{{ presenceLabel }}</span> }
+    }
   </div>
 
   <!-- Message list -->
@@ -61,6 +73,7 @@
     } @else if (auth.isAuthenticated()) {
       <input
         class="chat-input"
+        aria-label="Chat message"
         type="text"
         [(ngModel)]="inputText"
         (keydown)="onKeyDown($event)"
@@ -69,7 +82,7 @@
       <button class="chat-send" (click)="send()" [disabled]="!inputText.trim()">Send</button>
     } @else {
       <p class="chat-guest-prompt">
-        <button class="btn-link" (click)="openLogin.emit()">Log in</button> to join the chat
+        <button class="btn-link" (click)="openLogin.emit()">Log in or sign up</button> to chat
       </p>
     }
   </div>

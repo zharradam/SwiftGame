@@ -53,30 +53,41 @@ public class GameSessionRepository : IGameSessionRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<GameSession>> GetTopSessionsAsync(int count = 10, CancellationToken cancellationToken = default)
-        => await _context.GameSessions
+    public async Task<IReadOnlyList<GameSession>> GetTopSessionsAsync(int count = 10, DateTime? since = null, CancellationToken cancellationToken = default)
+        => await Completed(since)
             .Include(g => g.Player)
             .Include(g => g.Scores)
                 .ThenInclude(s => s.Song)
-            .Where(g => g.IsComplete)
             .OrderByDescending(g => g.TotalPoints)
-            .Take(count == int.MaxValue ? int.MaxValue : count)
+            .Take(count)
             .ToListAsync(cancellationToken);
+
+    public async Task<GameSession?> GetBestSessionAsync(Guid playerId, DateTime? since = null, CancellationToken cancellationToken = default)
+        => await Completed(since)
+            .Include(g => g.Player)
+            .Include(g => g.Scores)
+                .ThenInclude(s => s.Song)
+            .Where(g => g.PlayerId == playerId)
+            .OrderByDescending(g => g.TotalPoints)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    private IQueryable<GameSession> Completed(DateTime? since)
+        => since is null
+            ? _context.GameSessions.Where(g => g.IsComplete)
+            : _context.GameSessions.Where(g => g.IsComplete && g.CompletedAt >= since);
 
     public Task<int> CountCompletedAsync(CancellationToken cancellationToken = default)
         => _context.GameSessions.CountAsync(g => g.IsComplete, cancellationToken);
 
-    public async Task<int> GetSessionRankAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    public async Task<int> GetSessionRankAsync(Guid sessionId, DateTime? since = null, CancellationToken cancellationToken = default)
     {
         var session = await _context.GameSessions
             .FirstOrDefaultAsync(g => g.Id == sessionId, cancellationToken);
 
         if (session is null) return -1;
 
-        var rank = await _context.GameSessions
-            .Where(g => g.IsComplete && g.TotalPoints > session.TotalPoints)
+        return await Completed(since)
+            .Where(g => g.TotalPoints > session.TotalPoints)
             .CountAsync(cancellationToken) + 1;
-
-        return rank;
     }
 }

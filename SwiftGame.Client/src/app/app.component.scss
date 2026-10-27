@@ -46,7 +46,7 @@
   border: 1px solid rgba(232, 121, 249, 0.35);
   color: #c084fc;
   padding: 0.35rem 0.9rem;
-  border-radius: 0.5rem;
+  border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -59,11 +59,11 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #a855f7, #ec4899);
+  background: linear-gradient(135deg, #ff69b4 0%, #c850c0 50%, #8a2be2 100%);
   border: none;
   color: #fff;
   padding: 0.35rem 0.9rem;
-  border-radius: 0.5rem;
+  border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
@@ -72,168 +72,164 @@
   &:hover { opacity: 0.88; }
 }
 
-// ── Desktop body ──────────────────────────────────────────────────────────────
+// ── Body: mobile-first. Phone = one panel at a time (tabs); tablet = game + stacked side column;
+// desktop = three columns. The same three elements are used at every width.
 .app-body {
-  display: grid;
-  grid-template-columns: 340px 1fr 600px;
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 
-.app-sidebar {
-  position: sticky;
-  top: 0;
-  height: 100%;
+.app-sidebar,
+.app-main,
+.app-chat {
+  display: none;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 1.5rem 1rem 1.5rem 1.5rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-right: 1px solid rgba(255, 105, 180, 0.1);
 }
+
+.app-sidebar { padding: 0.75rem; }
 
 .app-main {
-  display: flex;
-  align-items: flex-start;
+  flex: 1;
   justify-content: center;
-  padding: 3rem 2rem;
-  height: 100%;
-  overflow: hidden;
+  align-items: flex-start;
+  padding: 0.75rem;
 }
 
-.app-chat {
-  padding: 1rem;
-  border-left: 1px solid rgba(255, 105, 180, 0.1);
-  height: 100%;
-  overflow-y: auto;
-}
+.app-chat { padding: 0; }
 
-// ── Mobile panels & tab bar (hidden on desktop) ───────────────────────────────
-.app-mobile {
-  display: none;
-}
+.app-body[data-tab="game"]        .app-main    { display: flex; }
+.app-body[data-tab="leaderboard"] .app-sidebar { display: block; }
+.app-body[data-tab="chat"]        .app-chat    { display: flex; flex-direction: column; }
 
+// ── Phone tab bar ─────────────────────────────────────────────────────────────
 .app-tabs {
-  display: none;
+  display: flex;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(232, 121, 249, 0.15);
+  background: rgba(10, 5, 20, 0.95);
+  backdrop-filter: blur(8px);
+  padding-bottom: env(safe-area-inset-bottom);
+
+  &__tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-height: 3.25rem;
+    padding: 0.5rem 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &.active {
+      .app-tabs__icon { opacity: 1; }
+      .app-tabs__label { color: #f0abfc; }
+      background: rgba(232, 121, 249, 0.08);
+    }
+
+    &:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.03);
+    }
+  }
+
+  &__icon {
+    font-size: 1.2rem;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+  }
+
+  &__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: color 0.15s;
+  }
 }
 
-// ── Mobile breakpoint ─────────────────────────────────────────────────────────
-@media (max-width: 1100px) {
-
-  .app-layout {
-    height: 100dvh;
-    overflow: hidden;
-  }
-
-  .app-header {
-    padding: 0.5rem 0.75rem;
-
-    &__title {
-      font-size: 0.75rem;
-      letter-spacing: 0.02em;
-      text-shadow:
-        0 1px 0 #9d174d,
-        0 2px 0 #7e1d4a,
-        0 3px 6px rgba(232, 121, 249, 0.4);
-      -webkit-text-fill-color: #f0abfc;
-    }
-
-    &__auth {
-      gap: 0.4rem;
-    }
-  }
-
-  .user-chip {
-    font-size: 0.7rem;
-  }
-
-  .btn-ghost {
-    font-size: 0.7rem;
-    padding: 0.25rem 0.6rem;
-  }
-
+// ── Touch: every control at least 44px tall, regardless of width ──────────────
+@media (pointer: coarse) {
+  .btn-ghost,
   .btn-primary {
-    font-size: 0.7rem;
-    padding: 0.25rem 0.6rem;
+    min-height: 44px;
+    padding-top: 0;
+    padding-bottom: 0;
   }
+}
 
-  // Hide desktop layout
+// ── Tablet: game + side column (leaderboard over chat) ────────────────────────
+@media (min-width: 768px) {
   .app-body {
-    display: none;
-  }
-
-  // Show mobile panels
-  .app-mobile {
-    display: flex;
-    flex: 1;
-    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "main side"
+      "main chat";
     overflow: hidden;
-    position: relative;
-
-    &__panel {
-      display: none;
-      flex: 1;
-      overflow-y: auto;
-      padding: 0.75rem;
-
-      &.active {
-        display: flex;
-        flex-direction: column;
-        overflow-y: auto;
-      }
-    }
-
-    // Chat fills edge to edge
-    &__panel--chat.active {
-      padding: 0;
-    }
   }
 
-  // Show tab bar
-  .app-tabs {
+  .app-sidebar,
+  .app-main,
+  .app-chat {
+    display: block;
+    height: 100%;
+  }
+
+  .app-sidebar {
+    grid-area: side;
+    padding: 1.25rem 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-left: 1px solid rgba(255, 105, 180, 0.1);
+  }
+
+  .app-main {
+    grid-area: main;
     display: flex;
-    flex-shrink: 0;
-    border-top: 1px solid rgba(232, 121, 249, 0.15);
-    background: rgba(10, 5, 20, 0.95);
-    backdrop-filter: blur(8px);
-    padding-bottom: env(safe-area-inset-bottom);
-
-    &__tab {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.2rem;
-      padding: 0.6rem 0;
-      background: none;
-      border: none;
-      cursor: pointer;
-      transition: background 0.15s;
-
-      &.active {
-        .app-tabs__icon { opacity: 1; }
-        .app-tabs__label { color: #f0abfc; }
-        background: rgba(232, 121, 249, 0.08);
-      }
-
-      &:hover:not(.active) {
-        background: rgba(255, 255, 255, 0.03);
-      }
-    }
-
-    &__icon {
-      font-size: 1.2rem;
-      opacity: 0.5;
-      transition: opacity 0.15s;
-    }
-
-    &__label {
-      font-size: 0.65rem;
-      font-weight: 600;
-      color: #475569;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      transition: color 0.15s;
-    }
+    padding: clamp(1rem, 3vh, 3rem) clamp(1rem, 2vw, 2rem);
   }
+
+  .app-chat {
+    grid-area: chat;
+    padding: 0 1rem 1rem;
+    border-left: 1px solid rgba(255, 105, 180, 0.1);
+    border-top: 1px solid rgba(255, 105, 180, 0.1);
+  }
+
+  .app-tabs { display: none; }
+}
+
+// ── Desktop: three columns ────────────────────────────────────────────────────
+@media (min-width: 1024px) {
+  .app-body {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(300px, 380px);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "side main chat";
+  }
+
+  .app-sidebar {
+    padding: 1.5rem 1rem 1.5rem 1.5rem;
+    border-left: none;
+    border-right: 1px solid rgba(255, 105, 180, 0.1);
+  }
+
+  .app-chat {
+    padding: 1rem;
+    border-top: none;
+  }
+}
+
+.btn-ghost:focus-visible,
+.btn-primary:focus-visible,
+.app-tabs__tab:focus-visible {
+  outline: 2px solid #f0abfc;
+  outline-offset: 2px;
 }

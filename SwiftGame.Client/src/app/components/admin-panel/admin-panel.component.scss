@@ -42,7 +42,7 @@
 .admin-close {
   background: none;
   border: none;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 1rem;
   cursor: pointer;
   padding: 0.25rem;
@@ -53,7 +53,7 @@
   padding: 2rem;
   text-align: center;
   font-size: 0.85rem;
-  color: #64748b;
+  color: #94a3b8;
 }
 
 .admin-error { color: #fca5a5; }
@@ -89,7 +89,7 @@
   }
 
   &__name  { font-size: 0.9rem; font-weight: 600; color: #f1f5f9; }
-  &__email { font-size: 0.75rem; color: #475569; }
+  &__email { font-size: 0.75rem; color: #94a3b8; }
 
   &__badges {
     display: flex;
@@ -105,7 +105,7 @@
 }
 
 .badge {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 0.15rem 0.5rem;
   border-radius: 50px;
@@ -161,7 +161,7 @@
   flex: 1;
   background: none;
   border: none;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.75rem;
@@ -199,7 +199,7 @@
 
 .admin-albums-hint {
   font-size: 0.78rem;
-  color: #475569;
+  color: #94a3b8;
 }
 
 .admin-album {
@@ -222,3 +222,4 @@
     font-weight: 500;
   }
 }
+button:focus-visible { outline: 2px solid #f0abfc; outline-offset: 2px; }

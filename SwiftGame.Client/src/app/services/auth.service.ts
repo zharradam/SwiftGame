@@ -88,6 +88,10 @@ export class AuthService {
     );
   }
 
+  clearError() {
+    this._error.set(null);
+  }
+
   refresh() {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (!refreshToken) return of(null);

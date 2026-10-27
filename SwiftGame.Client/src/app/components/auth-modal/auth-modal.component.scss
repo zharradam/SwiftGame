@@ -114,7 +114,7 @@
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
 
-    &::placeholder { color: #475569; }
+    &::placeholder { color: #94a3b8; }
 
     &:focus {
       border-color: #e879f9;
@@ -144,7 +144,7 @@
   text-align: center;
   margin-top: 1.25rem;
   font-size: 0.85rem;
-  color: #64748b;
+  color: #94a3b8;
 
   .auth-link {
     background: none;
@@ -168,3 +168,14 @@
   from { opacity: 0; transform: translateY(16px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+.auth-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+
+  &--center { text-align: center; margin: 0.25rem 1.5rem 0; }
+}
+
+button:focus-visible, input:focus-visible { outline: 2px solid #f0abfc; outline-offset: 2px; }

@@ -1,7 +1,8 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { GameService, LeaderboardEntry } from '../../services/game.service';
+import { GameService, LeaderboardEntry, LeaderboardPeriod, MyBest } from '../../services/game.service';
+import { AuthService } from '../../services/auth.service';
 import { SignalrService } from '../../services/signalr.service';
 
 @Component({
@@ -14,6 +15,8 @@ import { SignalrService } from '../../services/signalr.service';
 export class LeaderboardComponent implements OnInit, OnDestroy {
   entries: LeaderboardEntry[]              = [];
   state:   'loading' | 'loaded' | 'error' = 'loading';
+  period:  LeaderboardPeriod               = 'all';
+  myBest:  MyBest | null                   = null;
 
   flashSet    = new Set<string>();       // rows whose score just changed
   rankChanges = new Map<string, number>(); // key → +N moved up / -N moved down
@@ -25,8 +28,11 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   constructor(
     private gameService:    GameService,
     private signalrService: SignalrService,
-    private cdr:            ChangeDetectorRef
-  ) {}
+    private cdr:            ChangeDetectorRef,
+    readonly auth:          AuthService
+  ) {
+    effect(() => { this.auth.user(); this.loadMyBest(); });
+  }
 
   ngOnInit(): void {
     this.loadLeaderboard();
@@ -41,10 +47,37 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   }
 
   loadLeaderboard(): void {
-    this.gameService.getLeaderboard(10).subscribe({
+    this.gameService.getLeaderboard(10, this.period).subscribe({
       next:  (entries) => { this.diffAndUpdate(entries); this.state = 'loaded'; },
       error: ()        => { this.state = 'error'; }
     });
+    this.loadMyBest();
+  }
+
+  setPeriod(period: LeaderboardPeriod): void {
+    if (period === this.period) return;
+    this.period  = period;
+    this.entries = [];          // fresh list: no rank-change animations across periods
+    this.state   = 'loading';
+    this.loadLeaderboard();
+  }
+
+  loadMyBest(): void {
+    const id = this.auth.user()?.id;
+    if (!id) { this.myBest = null; return; }
+    this.gameService.getMyBest(id, this.period).subscribe({
+      next:  (best) => { this.myBest = best; },
+      error: ()     => { this.myBest = null; }
+    });
+  }
+
+  isMe(e: LeaderboardEntry): boolean {
+    return this.auth.isAuthenticated() && e.playerName === this.auth.username();
+  }
+
+  // Pinned row only when the player's best is outside the visible list
+  get showMyRow(): boolean {
+    return !!this.myBest && this.myBest.rank > this.entries.length;
   }
 
   // ── Diff logic ──────────────────────────────────────────────────
