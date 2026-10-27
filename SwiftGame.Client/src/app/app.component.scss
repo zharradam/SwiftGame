@@ -233,3 +233,9 @@
   outline: 2px solid #f0abfc;
   outline-offset: 2px;
 }
+
+@media (min-width: 1024px) {
+  .app-body:has(.chat-empty) {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) 260px;
+  }
+}

@@ -40,7 +40,7 @@ export class GameComponent implements OnInit, OnDestroy {
   streak:            number   = 0;
   previousBest:      number | null = null;   // best score before this game, logged-in players only
   shareState:        'idle' | 'copied' | 'shared' = 'idle';
-  readonly gameTitle: string = 'Mastermind: Taylor\'s Version';
+  readonly gameTitle: string = 'Swiftology';
 
   // True when the phone layout is showing another tab: pause the round instead of letting it time out unseen
   @Input() set hidden(v: boolean) { this.panelHidden = v; this.syncPause(); }
@@ -349,6 +349,7 @@ onSignUpClick() { this.openRegister.emit(); }
     this.roundResults      = [];
     this.streak            = 0;
     this.shareState        = 'idle';
+    this.showAllMissed     = false;
     this.state             = 'loading';
     this.paused            = false;
     this.slowStart         = false;
@@ -656,6 +657,17 @@ onSignUpClick() { this.openRegister.emit(); }
     return `${this.correctCount} correct of ${this.questionsAnswered} answered`;
   }
 
+  // Wordle-style: era square for a right answer, black for a miss
+  get shareGrid(): string {
+    return this.roundResults.map(r => r.isCorrect ? eraFor(r.album).square : '⬛').join('');
+  }
+
+  showAllMissed = false;
+
+  get missedShown(): SubmitAnswerResponse[] {
+    return this.showAllMissed ? this.missed : this.missed.slice(0, 3);
+  }
+
   get missed(): SubmitAnswerResponse[] {
     return this.roundResults.filter(r => !r.isCorrect);
   }
@@ -675,7 +687,7 @@ onSignUpClick() { this.openRegister.emit(); }
   }
 
   async share(): Promise<void> {
-    const text = `I scored ${this.totalScore.toLocaleString()} points on Swiftology. Can you beat me? https://swiftology.uk`;
+    const text = `Swiftology ${this.correctCount}/${this.questionsAnswered} · ${this.totalScore.toLocaleString()} pts\n${this.shareGrid}\nhttps://swiftology.uk`;
     try {
       if (navigator.share) {
         await navigator.share({ text });

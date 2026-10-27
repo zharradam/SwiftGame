@@ -1091,3 +1091,15 @@
 }
 .game-over .game-over-best { color: rgba(255, 255, 255, 0.72); font-weight: 500; }
 .game-over .game-over-best.is-best { color: #ffd166; font-weight: 700; }
+
+.game-over-grid {
+  font-size: 1.3rem;
+  letter-spacing: 0.1em;
+  margin: 0.25rem 0 0.75rem;
+  line-height: 1;
+}
+
+.missed-more {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+}

@@ -98,36 +98,7 @@
       <p class="game-over-label">Total points</p>
 
 
-      <div class="game-over-stats">
-        <div class="game-over-stat">
-          <span class="stat-value">{{ correctCount }}</span>
-          <span class="stat-label">correct</span>
-        </div>
-        <div class="game-over-stat-divider"></div>
-        <div class="game-over-stat">
-          <span class="stat-value">{{ questionsPerGame - correctCount }}</span>
-          <span class="stat-label">wrong</span>
-        </div>
-        <div class="game-over-stat-divider"></div>
-        <div class="game-over-stat">
-          <span class="stat-value">{{ accuracyPercent }}%</span>
-          <span class="stat-label">accuracy</span>
-        </div>
-      </div>
-
-      <p class="game-over-best" [class.is-best]="isNewBest" *ngIf="bestLine">{{ bestLine }}</p>
-      <p class="game-over-beat" *ngIf="beatPercent >= 25">You beat {{ beatPercent }}% of games played</p>
-
-      <div class="missed" *ngIf="missed.length">
-        <p class="missed-title">Songs you missed</p>
-        <ul class="missed-list">
-          <li *ngFor="let m of missed">
-            <span class="era-dot" [style.background]="era(m.album).color" aria-hidden="true"></span>
-            <span class="missed-song">{{ m.correctTitle }}</span>
-            <span class="missed-era" *ngIf="era(m.album).label" [style.color]="era(m.album).color">{{ era(m.album).label }}</span>
-          </li>
-        </ul>
-      </div>
+      <p class="game-over-grid" aria-label="{{ correctCount }} of {{ questionsAnswered }} right">{{ shareGrid }}</p>
 
       <div class="game-over-buttons">
         <button class="btn-primary btn-large" (click)="restartGame()">
@@ -144,6 +115,23 @@
         <p class="guest-save" *ngIf="!auth.isAuthenticated()">
           This score was saved as "Guest". <button class="btn-link" (click)="onSignUpClick()">Sign up free</button> so your next one has your name
         </p>
+      </div>
+
+      <p class="game-over-best" [class.is-best]="isNewBest" *ngIf="bestLine">{{ bestLine }}</p>
+      <p class="game-over-beat" *ngIf="beatPercent >= 25">You beat {{ beatPercent }}% of games played</p>
+
+      <div class="missed" *ngIf="missed.length">
+        <p class="missed-title">Songs you missed</p>
+        <ul class="missed-list">
+          <li *ngFor="let m of missedShown">
+            <span class="era-dot" [style.background]="era(m.album).color" aria-hidden="true"></span>
+            <span class="missed-song">{{ m.correctTitle }}</span>
+            <span class="missed-era" *ngIf="era(m.album).label" [style.color]="era(m.album).color">{{ era(m.album).label }}</span>
+          </li>
+        </ul>
+        <button class="btn-link missed-more" *ngIf="missed.length > 3" (click)="showAllMissed = !showAllMissed">
+          {{ showAllMissed ? 'Show fewer' : 'Show all ' + missed.length }}
+        </button>
       </div>
     </div>
 

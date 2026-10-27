@@ -7,7 +7,7 @@
       <button type="button" [class.active]="period === 'today'" [attr.aria-pressed]="period === 'today'" (click)="setPeriod('today')">Today</button>
     </div>
   </div>
-  <p class="leaderboard-caption">Highest-scoring games. Under each name: the song they scored most on, and their average answer time.</p>
+  <p class="leaderboard-caption">Highest-scoring games. Under each name: the song they scored most on, their average answer time and the date.</p>
 
   <div class="state-loading" *ngIf="state === 'loading'">
     <div class="spinner"></div>
@@ -40,7 +40,7 @@
 
       <div class="entry-score">
         <span class="entry-points">{{ entry.pointsEarned | number }}</span>
-        <span class="entry-time">{{ formatTime(entry.responseTimeMs) }}</span>
+        <span class="entry-time">{{ formatTime(entry.responseTimeMs) }} · {{ entry.playedAt | date:'d MMM' }}</span>
       </div>
 
       <span class="rank-change up"   *ngIf="getRankChange(entry) > 0">{{ getRankChangeLabel(entry) }}</span>
@@ -60,7 +60,7 @@
         </div>
         <div class="entry-score">
           <span class="entry-points">{{ myBest.entry.pointsEarned | number }}</span>
-          <span class="entry-time">{{ formatTime(myBest.entry.responseTimeMs) }}</span>
+          <span class="entry-time">{{ formatTime(myBest.entry.responseTimeMs) }} · {{ myBest.entry.playedAt | date:'d MMM' }}</span>
         </div>
       </div>
     } @else if (myBest) {
